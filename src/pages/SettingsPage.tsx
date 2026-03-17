@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../hooks/useProfile'
+import { Modal } from '../components/ui/Modal'
+import { Button } from '../components/ui/Button'
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
@@ -87,12 +90,27 @@ function Divider() {
 
 export function SettingsPage() {
   const navigate = useNavigate()
-  const { user, isGuest, signOut } = useAuth()
+  const { user, isGuest, signOut, deleteAccount } = useAuth()
   const { preferred_voice, auto_play, show_romanization, update, loading } = useProfile()
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const handleSignOut = async () => {
     await signOut()
     navigate('/login', { replace: true })
+  }
+
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true)
+    setDeleteError(null)
+    const { error } = await deleteAccount()
+    setDeleteLoading(false)
+    if (error) {
+      setDeleteError(error)
+    } else {
+      navigate('/login', { replace: true })
+    }
   }
 
   return (
@@ -226,11 +244,65 @@ export function SettingsPage() {
                 >
                   {isGuest ? 'ゲストモードを終了' : 'ログアウト'}
                 </button>
+                {!isGuest && user && (
+                  <>
+                    <Divider />
+                    <button
+                      type="button"
+                      onClick={() => { setDeleteError(null); setDeleteDialogOpen(true) }}
+                      className="w-full text-left px-4 py-4 text-base font-medium transition-colors"
+                      style={{ color: 'var(--color-text-secondary)', minHeight: 44 }}
+                    >
+                      アカウントを削除
+                    </button>
+                  </>
+                )}
               </SettingCard>
             </div>
 
           </div>
         )}
+
+        {/* ── Account deletion confirmation dialog ── */}
+        <Modal
+          open={deleteDialogOpen}
+          onClose={() => !deleteLoading && setDeleteDialogOpen(false)}
+          title="アカウントを削除しますか？"
+        >
+          <div className="flex flex-col gap-4">
+            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              アカウントとすべてのデータ（デッキ・カード）が完全に削除されます。この操作は元に戻せません。
+            </p>
+            {deleteError && (
+              <div
+                className="rounded-xl px-4 py-3 text-sm"
+                style={{ backgroundColor: 'var(--color-danger-light)', color: 'var(--color-danger)' }}
+              >
+                {deleteError}
+              </div>
+            )}
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                fullWidth
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={deleteLoading}
+              >
+                キャンセル
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                fullWidth
+                loading={deleteLoading}
+                onClick={handleDeleteAccount}
+              >
+                削除する
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </div>
   )

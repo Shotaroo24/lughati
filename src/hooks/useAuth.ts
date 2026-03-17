@@ -19,6 +19,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   continueAsGuest: () => void
+  deleteAccount: () => Promise<{ error: string | null }>
 }
 
 // ── Context ────────────────────────────────────────────────────────────────
@@ -86,9 +87,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsGuest(true)
   }
 
+  const deleteAccount = async (): Promise<{ error: string | null }> => {
+    if (!supabase || !user) return { error: '認証されていません' }
+    const { error } = await supabase.rpc('delete_account')
+    if (error) return { error: error.message }
+    await signOut()
+    return { error: null }
+  }
+
   return createElement(
     AuthContext.Provider,
-    { value: { user, isGuest, loading, signIn, signUp, signOut, continueAsGuest } },
+    { value: { user, isGuest, loading, signIn, signUp, signOut, continueAsGuest, deleteAccount } },
     children
   )
 }

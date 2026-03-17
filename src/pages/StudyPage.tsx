@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence, useAnimation } from 'framer-motion'
+import { motion, AnimatePresence, useAnimation, type TargetAndTransition } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { useCards } from '../hooks/useCards'
 import { useStudy } from '../hooks/useStudy'
@@ -427,7 +427,7 @@ function StudySettingsModal({
   preferred_voice: string
   auto_play: boolean
   show_romanization: boolean
-  onUpdate: (changes: Partial<{ preferred_voice: string; auto_play: boolean; show_romanization: boolean }>) => void
+  onUpdate: (changes: Partial<{ preferred_voice: 'ar-XA-Neural2-A' | 'ar-XA-Neural2-C'; auto_play: boolean; show_romanization: boolean }>) => void
 }) {
   if (!open) return null
 
@@ -721,16 +721,16 @@ export function StudyPage() {
             <motion.div
               key={`${study.currentIndex}-${study.displayMode}`}
               custom={navDirectionRef}
-              initial={(ref: React.MutableRefObject<'forward' | 'backward'>) => ({
+              initial={((ref: React.MutableRefObject<'forward' | 'backward'>) => ({
                 opacity: 0,
                 x: ref.current === 'forward' ? 60 : -60,
-              })}
+              })) as unknown as TargetAndTransition}
               animate={{ opacity: 1, x: 0, transition: { duration: 0.18 } }}
-              exit={(ref: React.MutableRefObject<'forward' | 'backward'>) => ({
+              exit={((ref: React.MutableRefObject<'forward' | 'backward'>) => ({
                 opacity: 0,
                 x: ref.current === 'forward' ? -60 : 60,
                 transition: { duration: 0.12 },
-              })}
+              })) as unknown as TargetAndTransition}
             >
               {study.currentCard && study.displayMode === 'flip' && (
                 <FlipCard
