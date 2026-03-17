@@ -20,13 +20,13 @@
 ## フェーズ1: 基盤構築（目安: 1〜2日）
 
 ### 1.1 プロジェクトセットアップ
-- ☐ Tailwind CSS に桜色テーマのCSS変数を設定
-- ☐ Google Fonts 読み込み（Noto Naskh Arabic、Inter）
-- ☐ index.css に DESIGN.md の全CSS変数を記述
-- ☐ React Router で全ルートを設定
-- ☐ Supabase クライアント初期化（lib/supabase.ts）
-- ☐ TypeScript 型定義（types/database.ts）
-- ☐ ページレイアウトコンポーネント（ヘッダー、ページコンテナ）
+- ☑ Tailwind CSS に桜色テーマのCSS変数を設定
+- ☑ Google Fonts 読み込み（Noto Naskh Arabic、Inter）
+- ☑ index.css に DESIGN.md の全CSS変数を記述
+- ☑ React Router で全ルートを設定
+- ☑ Supabase クライアント初期化（lib/supabase.ts）
+- ☑ TypeScript 型定義（types/database.ts）
+- ☑ ページレイアウトコンポーネント（ヘッダー、ページコンテナ）
 
 ### 1.2 データベース
 - ☐ profiles テーブル作成 + RLS設定
