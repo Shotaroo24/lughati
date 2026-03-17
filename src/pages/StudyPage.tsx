@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { useCards } from '../hooks/useCards'
 import { useStudy } from '../hooks/useStudy'
+import { playArabicTTS } from '../lib/tts'
 import type { DisplayMode, CardFilter } from '../types/study'
 
 // ── Icons ──────────────────────────────────────────────────────────────────
@@ -445,7 +446,9 @@ export function StudyPage() {
   }
 
   const handleSpeaker = () => {
-    // TTS will be wired in Phase 3
+    if (study.currentCard) {
+      playArabicTTS(study.currentCard.arabic)
+    }
   }
 
   const handleStarToggle = () => {

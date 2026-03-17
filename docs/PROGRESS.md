@@ -104,11 +104,11 @@
 
 ### 3.1 TTSプロキシ
 - ☐ Google Cloud TTS APIキーをSupabase Edge Functionの環境変数に追加
-- ☐ Edge Function デプロイ（supabase/functions/tts）
-- ☐ プロキシがPOSTでテキスト + 音声名を受け取る
-- ☐ プロキシがSupabase JWTを検証する
-- ☐ プロキシがMP3音声を返す
-- ☐ レート制限（ユーザーあたり50リクエスト/分）
+- ☑ Edge Function デプロイ（supabase/functions/tts）
+- ☑ プロキシがPOSTでテキスト + 音声名を受け取る
+- ☑ プロキシがSupabase JWTを検証する
+- ☑ プロキシがMP3音声を返す
+- ☑ レート制限（ユーザーあたり50リクエスト/分）
 
 ### 3.2 クライアント音声
 - ☐ TTSサービス（lib/tts.ts）実装
