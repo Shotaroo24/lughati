@@ -6,7 +6,7 @@ import type { Profile } from '../types/database'
 type ProfileSettings = Pick<Profile, 'preferred_voice' | 'auto_play' | 'show_romanization'>
 
 const DEFAULTS: ProfileSettings = {
-  preferred_voice: 'ar-XA-Wavenet-A',
+  preferred_voice: 'ar-XA-Neural2-A',
   auto_play: false,
   show_romanization: true,
 }

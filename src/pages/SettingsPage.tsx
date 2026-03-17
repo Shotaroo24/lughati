@@ -140,14 +140,14 @@ export function SettingsPage() {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => update({ preferred_voice: 'ar-XA-Wavenet-A' })}
+                      onClick={() => update({ preferred_voice: 'ar-XA-Neural2-A' })}
                       className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors"
                       style={{
                         minHeight: 44,
-                        backgroundColor: preferred_voice === 'ar-XA-Wavenet-A'
+                        backgroundColor: preferred_voice === 'ar-XA-Neural2-A'
                           ? 'var(--color-primary)'
                           : 'var(--color-primary-light)',
-                        color: preferred_voice === 'ar-XA-Wavenet-A'
+                        color: preferred_voice === 'ar-XA-Neural2-A'
                           ? '#fff'
                           : 'var(--color-primary)',
                       }}
@@ -156,14 +156,14 @@ export function SettingsPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => update({ preferred_voice: 'ar-XA-Wavenet-B' })}
+                      onClick={() => update({ preferred_voice: 'ar-XA-Neural2-C' })}
                       className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors"
                       style={{
                         minHeight: 44,
-                        backgroundColor: preferred_voice === 'ar-XA-Wavenet-B'
+                        backgroundColor: preferred_voice === 'ar-XA-Neural2-C'
                           ? 'var(--color-primary)'
                           : 'var(--color-primary-light)',
-                        color: preferred_voice === 'ar-XA-Wavenet-B'
+                        color: preferred_voice === 'ar-XA-Neural2-C'
                           ? '#fff'
                           : 'var(--color-primary)',
                       }}

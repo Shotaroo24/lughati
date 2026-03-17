@@ -32,12 +32,12 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl p-6"
+        className="w-full max-w-[480px] rounded-2xl p-6"
         style={{ backgroundColor: 'var(--color-bg-card)' }}
         onClick={e => e.stopPropagation()}
       >

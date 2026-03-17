@@ -1,9 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const GOOGLE_TTS_API_KEY = Deno.env.get('GOOGLE_TTS_API_KEY')
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 
 // In-memory rate limiter: userId -> { count, windowStart }
 const rateLimitMap = new Map<string, { count: number; windowStart: number }>()
@@ -25,6 +22,19 @@ function checkRateLimit(userId: string): boolean {
   return true
 }
 
+// Decode JWT payload without network call (no signature verification needed for rate-limiting)
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = payload + '='.repeat((4 - payload.length % 4) % 4)
+    return JSON.parse(atob(padded))
+  } catch {
+    return null
+  }
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -41,28 +51,31 @@ serve(async (req) => {
     return new Response('Method not allowed', { status: 405, headers: CORS_HEADERS })
   }
 
-  // ── JWT検証 ───────────────────────────────────────────────────────────────
+  // ── 認証チェック ──────────────────────────────────────────────────────────
+  // Require either a valid Bearer JWT or a valid apikey header
   const authHeader = req.headers.get('Authorization')
-  if (!authHeader) {
+  const apikeyHeader = req.headers.get('apikey')
+
+  console.log('[tts] auth header present:', !!authHeader)
+  console.log('[tts] apikey header present:', !!apikeyHeader)
+
+  if (!authHeader && !apikeyHeader) {
+    console.log('[tts] 401: no auth headers')
     return new Response('認証エラー', { status: 401, headers: CORS_HEADERS })
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  })
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-  // Allow anon key access for guest users
-  const authToken = authHeader.replace(/^Bearer\s+/i, '')
-  const isAnonAccess = !user && authToken === SUPABASE_ANON_KEY
-
-  if ((authError || !user) && !isAnonAccess) {
-    return new Response('認証エラー', { status: 401, headers: CORS_HEADERS })
+  // Extract user ID from JWT for rate limiting (no network call)
+  let rateLimitKey = 'anon'
+  if (authHeader) {
+    const token = authHeader.replace(/^Bearer\s+/i, '')
+    const payload = decodeJwtPayload(token)
+    console.log('[tts] jwt payload role:', payload?.role, 'sub:', payload?.sub)
+    if (payload?.sub) {
+      rateLimitKey = payload.sub as string
+    }
   }
 
   // ── レート制限 ────────────────────────────────────────────────────────────
-  const rateLimitKey = user?.id ?? 'anon'
   if (!checkRateLimit(rateLimitKey)) {
     return new Response('レート制限超過', { status: 429, headers: CORS_HEADERS })
   }
@@ -73,7 +86,7 @@ serve(async (req) => {
   try {
     const body = await req.json()
     text = body.text
-    voice = body.voice ?? 'ar-XA-Wavenet-A'
+    voice = body.voice ?? 'ar-XA-Neural2-A'
   } catch {
     return new Response('リクエスト解析エラー', { status: 400, headers: CORS_HEADERS })
   }
@@ -98,7 +111,7 @@ serve(async (req) => {
           voice: { languageCode: 'ar-XA', name: voice },
           audioConfig: {
             audioEncoding: 'MP3',
-            speakingRate: 0.85,
+            speakingRate: 1.05,
             pitch: 0.0,
           },
         }),

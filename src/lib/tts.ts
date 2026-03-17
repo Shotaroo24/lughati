@@ -59,7 +59,7 @@ export function stopArabicTTS(): void {
 
 export async function playArabicTTS(
   text: string,
-  voice: string = 'ar-XA-Wavenet-A',
+  voice: string = 'ar-XA-Neural2-A',
   onPlayStart?: () => void,
 ): Promise<void> {
   // Stop any currently playing audio immediately

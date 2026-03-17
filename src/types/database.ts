@@ -1,7 +1,7 @@
 export interface Profile {
   id: string;
   display_name: string | null;
-  preferred_voice: 'ar-XA-Wavenet-A' | 'ar-XA-Wavenet-B';
+  preferred_voice: 'ar-XA-Neural2-A' | 'ar-XA-Neural2-C';
   auto_play: boolean;
   show_romanization: boolean;
   created_at: string;

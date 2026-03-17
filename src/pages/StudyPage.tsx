@@ -433,21 +433,16 @@ function StudySettingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-t-2xl"
+        className="w-full max-w-[480px] rounded-2xl animate-fade-in"
         style={{ backgroundColor: 'var(--color-bg-card)' }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Handle bar */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--color-border)' }} />
-        </div>
-
-        <div className="px-5 pb-8 pt-2">
+        <div className="px-5 pb-6 pt-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>設定</h2>
             <button
@@ -463,7 +458,7 @@ function StudySettingsModal({
           {/* Voice */}
           <p className="text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>アラビア語音声</p>
           <div className="flex gap-2 mb-5">
-            {(['ar-XA-Wavenet-A', 'ar-XA-Wavenet-B'] as const).map((v, i) => (
+            {(['ar-XA-Neural2-A', 'ar-XA-Neural2-C'] as const).map((v, i) => (
               <button
                 key={v}
                 type="button"
