@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { useCards } from '../hooks/useCards'
 import { useStudy } from '../hooks/useStudy'
@@ -86,7 +86,10 @@ function fireConfetti() {
   }, 200)
 }
 
-// ── FlipCard (項目1: star inside card / 項目2: rotateX / 項目3: blur fix) ──
+// ── FlipCard ────────────────────────────────────────────────────────────────
+// 360-degree rotation: card does one full spin per tap.
+// Content swaps at the midpoint (card invisible at 90°–270°), so the new
+// face is already in place when the card swings back into view.
 
 interface FlipCardProps {
   arabic: string
@@ -99,15 +102,50 @@ interface FlipCardProps {
   onToggleStar: () => void
 }
 
+const FLIP_DURATION = 0.3 // seconds
+
 function FlipCard({
   arabic, english, romanization,
   isFlipped, isStarred,
   onFlip, onSpeaker, onToggleStar,
 }: FlipCardProps) {
+  const controls = useAnimation()
+  const [faceContent, setFaceContent] = useState<'front' | 'back'>('front')
+  const [isAnimating, setIsAnimating] = useState(false)
+  // Track previous isFlipped to avoid animating on initial mount.
+  // (useRef value persists through React StrictMode double-invocation,
+  //  so comparing prev vs current is more reliable than an isMounted flag.)
+  const prevIsFlipped = useRef<boolean | null>(null)
+
+  useEffect(() => {
+    if (prevIsFlipped.current === null) {
+      // First render: initialize without animation
+      prevIsFlipped.current = isFlipped
+      return
+    }
+    if (prevIsFlipped.current === isFlipped) return
+    prevIsFlipped.current = isFlipped
+
+    setIsAnimating(true)
+    // Card tilts to edge (0→90°), swaps content while edge-on, comes back from the other side (−90→0°).
+    // The card stays visible throughout — no backface-hidden disappearing.
+    const timer = setTimeout(
+      () => setFaceContent(isFlipped ? 'back' : 'front'),
+      (FLIP_DURATION * 1000) / 2,
+    )
+    controls.start({
+      rotateX: [0, 90, -90, 0],
+      transition: { duration: FLIP_DURATION, ease: 'easeInOut', times: [0, 0.5, 0.5, 1] },
+    }).then(() => {
+      controls.set({ rotateX: 0 })
+      setIsAnimating(false)
+    })
+    return () => clearTimeout(timer)
+  }, [isFlipped]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div
       className="w-full cursor-pointer select-none"
-      // 項目3: 大きめのperspectiveでテキストぼやけを軽減
       style={{ perspective: '2000px', minHeight: 300 }}
       onClick={onFlip}
       role="button"
@@ -116,121 +154,102 @@ function FlipCard({
       onKeyDown={e => e.key === ' ' && onFlip()}
     >
       <motion.div
-        // 項目2: rotateX（縦回転）に変更
-        animate={{ rotateX: isFlipped ? 180 : 0 }}
-        transition={{ duration: 0.45, ease: 'easeInOut' }}
+        animate={controls}
         style={{
-          transformStyle: 'preserve-3d',
           position: 'relative',
           minHeight: 300,
-          // 項目3: GPU合成レイヤーに昇格してサブピクセルぼやけを防止
-          willChange: 'transform',
+          willChange: isAnimating ? 'transform' : 'auto',
         }}
       >
-        {/* Front — Arabic */}
-        <div
-          className="absolute inset-0 rounded-2xl flex flex-col items-center justify-center gap-4 p-8"
-          style={{
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-            backgroundColor: 'var(--color-bg-card)',
-            boxShadow: 'var(--shadow-card-hover)',
-          }}
-        >
-          {/* 項目1: star in card top-right */}
-          <button
-            type="button"
-            aria-label={isStarred ? '星を外す' : '星をつける'}
-            onClick={e => { e.stopPropagation(); onToggleStar() }}
-            className="absolute top-3 right-3 flex items-center justify-center rounded-xl transition-colors"
+        {faceContent === 'front' ? (
+          /* Front — Arabic */
+          <div
+            className="absolute inset-0 rounded-2xl flex flex-col items-center justify-center gap-4 p-8"
             style={{
-              minWidth: 44, minHeight: 44,
-              color: isStarred ? 'var(--color-accent)' : 'var(--color-border)',
+              backgroundColor: 'var(--color-bg-card)',
+              boxShadow: 'var(--shadow-card-hover)',
             }}
           >
-            <StarIcon filled={isStarred} />
-          </button>
-
-          <p
-            dir="rtl"
-            className="text-center leading-relaxed"
-            style={{
-              fontFamily: 'var(--font-arabic)',
-              fontSize: 36,
-              fontWeight: 700,
-              color: 'var(--color-text-primary)',
-              // 項目3: フォントのアンチエイリアス
-              WebkitFontSmoothing: 'antialiased',
-              MozOsxFontSmoothing: 'grayscale',
-            }}
-          >
-            {arabic}
-          </p>
-
-          <button
-            type="button"
-            aria-label="発音を聞く"
-            onClick={e => { e.stopPropagation(); onSpeaker() }}
-            className="flex items-center justify-center rounded-full transition-colors"
-            style={{
-              minWidth: 44, minHeight: 44,
-              color: 'var(--color-primary)',
-              backgroundColor: 'var(--color-primary-light)',
-            }}
-          >
-            <SpeakerIcon />
-          </button>
-          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            タップして裏返す
-          </p>
-        </div>
-
-        {/* Back — English */}
-        <div
-          className="absolute inset-0 rounded-2xl flex flex-col items-center justify-center gap-3 p-8"
-          style={{
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-            // 項目2: rotateX で裏面を設定
-            transform: 'rotateX(180deg)',
-            backgroundColor: 'var(--color-bg-card)',
-            boxShadow: 'var(--shadow-card-hover)',
-          }}
-        >
-          {/* 項目1: star on back face too */}
-          <button
-            type="button"
-            aria-label={isStarred ? '星を外す' : '星をつける'}
-            onClick={e => { e.stopPropagation(); onToggleStar() }}
-            className="absolute top-3 right-3 flex items-center justify-center rounded-xl transition-colors"
-            style={{
-              minWidth: 44, minHeight: 44,
-              color: isStarred ? 'var(--color-accent)' : 'var(--color-border)',
-            }}
-          >
-            <StarIcon filled={isStarred} />
-          </button>
-
-          <p
-            className="text-center"
-            style={{
-              fontSize: 28,
-              color: 'var(--color-text-primary)',
-              WebkitFontSmoothing: 'antialiased',
-              MozOsxFontSmoothing: 'grayscale',
-            }}
-          >
-            {english}
-          </p>
-          {romanization && (
-            <p
-              className="text-center italic"
-              style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}
+            <button
+              type="button"
+              aria-label={isStarred ? '星を外す' : '星をつける'}
+              onClick={e => { e.stopPropagation(); onToggleStar() }}
+              className="absolute top-3 right-3 flex items-center justify-center rounded-xl transition-colors"
+              style={{ minWidth: 44, minHeight: 44, color: isStarred ? 'var(--color-accent)' : 'var(--color-border)' }}
             >
-              {romanization}
+              <StarIcon filled={isStarred} />
+            </button>
+
+            <p
+              dir="rtl"
+              className="text-center leading-relaxed"
+              style={{
+                fontFamily: 'var(--font-arabic)',
+                fontSize: 36,
+                fontWeight: 700,
+                color: 'var(--color-text-primary)',
+                WebkitFontSmoothing: 'antialiased',
+                MozOsxFontSmoothing: 'grayscale',
+                textRendering: 'optimizeLegibility',
+              }}
+            >
+              {arabic}
             </p>
-          )}
-        </div>
+
+            <button
+              type="button"
+              aria-label="発音を聞く"
+              onClick={e => { e.stopPropagation(); onSpeaker() }}
+              className="flex items-center justify-center rounded-full transition-colors"
+              style={{ minWidth: 44, minHeight: 44, color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-light)' }}
+            >
+              <SpeakerIcon />
+            </button>
+            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              タップして裏返す
+            </p>
+          </div>
+        ) : (
+          /* Back — English */
+          <div
+            className="absolute inset-0 rounded-2xl flex flex-col items-center justify-center gap-3 p-8"
+            style={{
+              backgroundColor: 'var(--color-bg-card)',
+              boxShadow: 'var(--shadow-card-hover)',
+            }}
+          >
+            <button
+              type="button"
+              aria-label={isStarred ? '星を外す' : '星をつける'}
+              onClick={e => { e.stopPropagation(); onToggleStar() }}
+              className="absolute top-3 right-3 flex items-center justify-center rounded-xl transition-colors"
+              style={{ minWidth: 44, minHeight: 44, color: isStarred ? 'var(--color-accent)' : 'var(--color-border)' }}
+            >
+              <StarIcon filled={isStarred} />
+            </button>
+
+            <p
+              className="text-center"
+              style={{
+                fontSize: 28,
+                color: 'var(--color-text-primary)',
+                WebkitFontSmoothing: 'antialiased',
+                MozOsxFontSmoothing: 'grayscale',
+                textRendering: 'optimizeLegibility',
+              }}
+            >
+              {english}
+            </p>
+            {romanization && (
+              <p
+                className="text-center italic"
+                style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}
+              >
+                {romanization}
+              </p>
+            )}
+          </div>
+        )}
       </motion.div>
     </div>
   )
@@ -388,9 +407,10 @@ export function StudyPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { cards, loading, toggleStar } = useCards(id ?? '')
-  const study = useStudy(cards)
+  const study = useStudy(cards, id ?? '')
 
   const [isCompleted, setIsCompleted] = useState(false)
+  const [navDirection, setNavDirection] = useState<'forward' | 'backward'>('forward')
   const dragStartX = useRef<number | null>(null)
 
   // Reset completion when filter/shuffle changes
@@ -402,7 +422,7 @@ export function StudyPage() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') handleNext()
-      else if (e.key === 'ArrowLeft') study.goPrev()
+      else if (e.key === 'ArrowLeft') handlePrev()
       else if (e.key === ' ') { e.preventDefault(); study.flip() }
     }
     window.addEventListener('keydown', handler)
@@ -410,11 +430,18 @@ export function StudyPage() {
   })
 
   const handleNext = () => {
+    setNavDirection('forward')
     if (study.currentIndex === study.total - 1) {
+      study.resetSavedPosition()
       setIsCompleted(true)
     } else {
       study.goNext()
     }
+  }
+
+  const handlePrev = () => {
+    setNavDirection('backward')
+    study.goPrev()
   }
 
   const handleSpeaker = () => {
@@ -502,18 +529,18 @@ export function StudyPage() {
           if (dragStartX.current === null) return
           const delta = e.changedTouches[0].clientX - dragStartX.current
           if (delta < -50) handleNext()
-          else if (delta > 50) study.goPrev()
+          else if (delta > 50) handlePrev()
           dragStartX.current = null
         }}
       >
         <div className="w-full max-w-md">
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait" custom={navDirection} initial={false}>
             <motion.div
               key={`${study.currentIndex}-${study.displayMode}`}
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
-              transition={{ duration: 0.18 }}
+              custom={navDirection}
+              initial={(dir: string) => ({ opacity: 0, x: dir === 'forward' ? 60 : -60 })}
+              animate={{ opacity: 1, x: 0, transition: { duration: 0.18 } }}
+              exit={(dir: string) => ({ opacity: 0, x: dir === 'forward' ? -60 : 60, transition: { duration: 0.12 } })}
             >
               {study.currentCard && study.displayMode === 'flip' && (
                 <FlipCard
@@ -545,7 +572,7 @@ export function StudyPage() {
         <div className="flex items-center gap-8 mt-8">
           <button
             type="button"
-            onClick={study.goPrev}
+            onClick={handlePrev}
             disabled={study.currentIndex === 0}
             aria-label="前のカード"
             className="flex items-center justify-center rounded-full transition-colors disabled:opacity-30"

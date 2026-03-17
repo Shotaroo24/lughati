@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import type { Card } from '../types/database'
 import type { DisplayMode, CardFilter } from '../types/study'
 
@@ -11,6 +11,37 @@ function shuffleArray<T>(arr: T[]): T[] {
   return copy
 }
 
+function storageKey(deckId: string) {
+  return `lughati_study_position_${deckId}`
+}
+
+function loadSavedIndex(deckId: string): number {
+  try {
+    const raw = localStorage.getItem(storageKey(deckId))
+    if (raw === null) return 0
+    const n = parseInt(raw, 10)
+    return Number.isFinite(n) && n >= 0 ? n : 0
+  } catch {
+    return 0
+  }
+}
+
+function saveIndex(deckId: string, index: number) {
+  try {
+    localStorage.setItem(storageKey(deckId), String(index))
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function clearSavedIndex(deckId: string) {
+  try {
+    localStorage.removeItem(storageKey(deckId))
+  } catch {
+    // ignore
+  }
+}
+
 interface SessionState {
   currentIndex: number
   isFlipped: boolean
@@ -20,15 +51,15 @@ interface SessionState {
   shuffledOrder: number[]
 }
 
-export function useStudy(allCards: Card[]) {
-  const [state, setState] = useState<SessionState>({
-    currentIndex: 0,
+export function useStudy(allCards: Card[], deckId: string) {
+  const [state, setState] = useState<SessionState>(() => ({
+    currentIndex: loadSavedIndex(deckId),
     isFlipped: false,
     displayMode: 'flip',
     filter: 'all',
     isShuffled: false,
     shuffledOrder: [],
-  })
+  }))
 
   // Cards after filter applied
   const filteredCards = useMemo(
@@ -49,6 +80,13 @@ export function useStudy(allCards: Card[]) {
   const safeIndex = Math.min(state.currentIndex, Math.max(0, total - 1))
   const currentCard: Card | null = studyCards[safeIndex] ?? null
   const currentNumber = total > 0 ? safeIndex + 1 : 0
+
+  // Persist position to localStorage whenever it changes (only for unshuffled, all-cards mode)
+  useEffect(() => {
+    if (!state.isShuffled && state.filter === 'all') {
+      saveIndex(deckId, safeIndex)
+    }
+  }, [deckId, safeIndex, state.isShuffled, state.filter])
 
   // ── Navigation ─────────────────────────────────────────────────────────
 
@@ -98,6 +136,11 @@ export function useStudy(allCards: Card[]) {
     setState(s => ({ ...s, displayMode, isFlipped: false }))
   }, [])
 
+  const resetSavedPosition = useCallback(() => {
+    clearSavedIndex(deckId)
+    setState(s => ({ ...s, currentIndex: 0, isFlipped: false }))
+  }, [deckId])
+
   return {
     currentCard,
     studyCards,
@@ -114,5 +157,6 @@ export function useStudy(allCards: Card[]) {
     toggleShuffle,
     setFilter,
     setDisplayMode,
+    resetSavedPosition,
   }
 }
