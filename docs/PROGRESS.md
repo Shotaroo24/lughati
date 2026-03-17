@@ -103,7 +103,7 @@
 ## フェーズ3: TTS統合（目安: 5日目）
 
 ### 3.1 TTSプロキシ
-- ☐ Google Cloud TTS APIキーをSupabase Edge Functionの環境変数に追加
+- ☑ Google Cloud TTS APIキーをSupabase Edge Functionの環境変数に追加
 - ☑ Edge Function デプロイ（supabase/functions/tts）
 - ☑ プロキシがPOSTでテキスト + 音声名を受け取る
 - ☑ プロキシがSupabase JWTを検証する
