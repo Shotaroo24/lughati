@@ -62,9 +62,6 @@ function buildSVG(size) {
               fill="#FFE4EE" fill-opacity="0.95"/>`
   }).join('\n    ')
 
-  // Text
-  const fontSize = size * 0.13
-  const textY    = cy + size * 0.39
   const cornerR  = size * 0.22
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -103,17 +100,6 @@ function buildSVG(size) {
   <!-- Stamen dots -->
   ${stamenDots}
 
-  <!-- Lughati text -->
-  <text
-    x="${cx}" y="${textY}"
-    text-anchor="middle" dominant-baseline="middle"
-    font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
-    font-size="${fontSize.toFixed(1)}"
-    font-weight="700"
-    letter-spacing="${(size * 0.005).toFixed(1)}"
-    fill="white"
-    fill-opacity="0.97"
-  >Lughati</text>
 </svg>`
 }
 
