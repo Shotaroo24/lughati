@@ -6,7 +6,9 @@
       "Bash(netstat -ano)",
       "Bash(xxd /c/Lugati/Review.md)",
       "Bash(powershell.exe -Command \"Get-Content 'C:\\\\Lugati\\\\Review.md' -Raw\")",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(node -e \"require\\(''sharp''\\)\")",
+      "Bash(node -e \"require\\(''canvas''\\)\")"
     ]
   }
 }
