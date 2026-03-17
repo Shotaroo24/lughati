@@ -5,7 +5,7 @@ import confetti from 'canvas-confetti'
 import { useCards } from '../hooks/useCards'
 import { useStudy } from '../hooks/useStudy'
 import { useProfile } from '../hooks/useProfile'
-import { playArabicTTS } from '../lib/tts'
+import { playArabicTTS, stopArabicTTS } from '../lib/tts'
 import type { DisplayMode, CardFilter } from '../types/study'
 
 // ── Icons ──────────────────────────────────────────────────────────────────
@@ -50,6 +50,15 @@ function XIcon() {
   )
 }
 
+function GearIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+    </svg>
+  )
+}
+
 function SpeakerIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -57,6 +66,63 @@ function SpeakerIcon() {
       <path d="M15.54 8.46a5 5 0 010 7.07" />
       <path d="M19.07 4.93a10 10 0 010 14.14" />
     </svg>
+  )
+}
+
+function SpinnerIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M12 2a10 10 0 1010 10" />
+    </svg>
+  )
+}
+
+// ── SpeakerButton ──────────────────────────────────────────────────────────
+
+type SpeakerState = 'idle' | 'loading' | 'playing'
+
+function SpeakerButton({ speakerState, onPress }: {
+  speakerState: SpeakerState
+  onPress: () => void
+}) {
+  const isPlaying = speakerState === 'playing'
+  const isLoading = speakerState === 'loading'
+
+  return (
+    <motion.button
+      type="button"
+      aria-label="発音を聞く"
+      onClick={e => { e.stopPropagation(); onPress() }}
+      whileTap={{ scale: 0.85 }}
+      className="flex items-center justify-center rounded-full relative overflow-hidden"
+      style={{
+        minWidth: 44,
+        minHeight: 44,
+        color: isPlaying ? '#E8567F' : 'var(--color-primary)',
+        backgroundColor: isPlaying ? 'rgba(232,86,127,0.12)' : 'var(--color-primary-light)',
+        transition: 'background-color 0.15s, color 0.15s',
+      }}
+    >
+      {isPlaying && (
+        <motion.span
+          className="absolute inset-0 rounded-full"
+          animate={{ scale: [1, 1.8], opacity: [0.25, 0] }}
+          transition={{ repeat: Infinity, duration: 1.0, ease: 'easeOut' }}
+          style={{ backgroundColor: '#E8567F' }}
+        />
+      )}
+      {isLoading ? (
+        <motion.span
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
+          style={{ display: 'flex' }}
+        >
+          <SpinnerIcon />
+        </motion.span>
+      ) : (
+        <SpeakerIcon />
+      )}
+    </motion.button>
   )
 }
 
@@ -89,9 +155,6 @@ function fireConfetti() {
 }
 
 // ── FlipCard ────────────────────────────────────────────────────────────────
-// 360-degree rotation: card does one full spin per tap.
-// Content swaps at the midpoint (card invisible at 90°–270°), so the new
-// face is already in place when the card swings back into view.
 
 interface FlipCardProps {
   arabic: string
@@ -100,29 +163,26 @@ interface FlipCardProps {
   isFlipped: boolean
   isStarred: boolean
   showRomanization: boolean
+  speakerState: SpeakerState
   onFlip: () => void
   onSpeaker: () => void
   onToggleStar: () => void
 }
 
-const FLIP_DURATION = 0.3 // seconds
+const FLIP_DURATION = 0.3
 
 function FlipCard({
   arabic, english, romanization,
   isFlipped, isStarred, showRomanization,
-  onFlip, onSpeaker, onToggleStar,
+  speakerState, onFlip, onSpeaker, onToggleStar,
 }: FlipCardProps) {
   const controls = useAnimation()
   const [faceContent, setFaceContent] = useState<'front' | 'back'>('front')
   const [isAnimating, setIsAnimating] = useState(false)
-  // Track previous isFlipped to avoid animating on initial mount.
-  // (useRef value persists through React StrictMode double-invocation,
-  //  so comparing prev vs current is more reliable than an isMounted flag.)
   const prevIsFlipped = useRef<boolean | null>(null)
 
   useEffect(() => {
     if (prevIsFlipped.current === null) {
-      // First render: initialize without animation
       prevIsFlipped.current = isFlipped
       return
     }
@@ -130,8 +190,6 @@ function FlipCard({
     prevIsFlipped.current = isFlipped
 
     setIsAnimating(true)
-    // Card tilts to edge (0→90°), swaps content while edge-on, comes back from the other side (−90→0°).
-    // The card stays visible throughout — no backface-hidden disappearing.
     const timer = setTimeout(
       () => setFaceContent(isFlipped ? 'back' : 'front'),
       (FLIP_DURATION * 1000) / 2,
@@ -165,7 +223,6 @@ function FlipCard({
         }}
       >
         {faceContent === 'front' ? (
-          /* Front — Arabic */
           <div
             className="absolute inset-0 rounded-2xl flex flex-col items-center justify-center gap-4 p-8"
             style={{
@@ -199,21 +256,13 @@ function FlipCard({
               {arabic}
             </p>
 
-            <button
-              type="button"
-              aria-label="発音を聞く"
-              onClick={e => { e.stopPropagation(); onSpeaker() }}
-              className="flex items-center justify-center rounded-full transition-colors"
-              style={{ minWidth: 44, minHeight: 44, color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-light)' }}
-            >
-              <SpeakerIcon />
-            </button>
+            <SpeakerButton speakerState={speakerState} onPress={onSpeaker} />
+
             <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
               タップして裏返す
             </p>
           </div>
         ) : (
-          /* Back — English */
           <div
             className="absolute inset-0 rounded-2xl flex flex-col items-center justify-center gap-3 p-8"
             style={{
@@ -258,7 +307,7 @@ function FlipCard({
   )
 }
 
-// ── BothSidesCard (項目1: star inside) ────────────────────────────────────
+// ── BothSidesCard ──────────────────────────────────────────────────────────
 
 interface BothSidesCardProps {
   arabic: string
@@ -266,13 +315,15 @@ interface BothSidesCardProps {
   romanization: string | null
   isStarred: boolean
   showRomanization: boolean
+  speakerState: SpeakerState
   onSpeaker: () => void
   onToggleStar: () => void
 }
 
 function BothSidesCard({
   arabic, english, romanization,
-  isStarred, showRomanization, onSpeaker, onToggleStar,
+  isStarred, showRomanization,
+  speakerState, onSpeaker, onToggleStar,
 }: BothSidesCardProps) {
   return (
     <div
@@ -283,7 +334,6 @@ function BothSidesCard({
         minHeight: 300,
       }}
     >
-      {/* 項目1: star top-right */}
       <button
         type="button"
         aria-label={isStarred ? '星を外す' : '星をつける'}
@@ -312,19 +362,7 @@ function BothSidesCard({
         >
           {arabic}
         </p>
-        <button
-          type="button"
-          aria-label="発音を聞く"
-          onClick={onSpeaker}
-          className="flex items-center justify-center rounded-full transition-colors"
-          style={{
-            minWidth: 44, minHeight: 44,
-            color: 'var(--color-primary)',
-            backgroundColor: 'var(--color-primary-light)',
-          }}
-        >
-          <SpeakerIcon />
-        </button>
+        <SpeakerButton speakerState={speakerState} onPress={onSpeaker} />
       </div>
 
       <div className="w-full h-px" style={{ backgroundColor: 'var(--color-border)' }} />
@@ -374,7 +412,122 @@ function ToggleButton({ active, onClick, children }: {
   )
 }
 
-// ── CompletionScreen (項目5) ───────────────────────────────────────────────
+// ── StudySettingsModal ─────────────────────────────────────────────────────
+
+function StudySettingsModal({
+  open,
+  onClose,
+  preferred_voice,
+  auto_play,
+  show_romanization,
+  onUpdate,
+}: {
+  open: boolean
+  onClose: () => void
+  preferred_voice: string
+  auto_play: boolean
+  show_romanization: boolean
+  onUpdate: (changes: Partial<{ preferred_voice: string; auto_play: boolean; show_romanization: boolean }>) => void
+}) {
+  if (!open) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-t-2xl"
+        style={{ backgroundColor: 'var(--color-bg-card)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Handle bar */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--color-border)' }} />
+        </div>
+
+        <div className="px-5 pb-8 pt-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>設定</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center justify-center rounded-xl"
+              style={{ minWidth: 44, minHeight: 44, color: 'var(--color-text-secondary)' }}
+            >
+              <XIcon />
+            </button>
+          </div>
+
+          {/* Voice */}
+          <p className="text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>アラビア語音声</p>
+          <div className="flex gap-2 mb-5">
+            {(['ar-XA-Wavenet-A', 'ar-XA-Wavenet-B'] as const).map((v, i) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => onUpdate({ preferred_voice: v })}
+                className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors"
+                style={{
+                  minHeight: 44,
+                  backgroundColor: preferred_voice === v ? 'var(--color-primary)' : 'var(--color-primary-light)',
+                  color: preferred_voice === v ? '#fff' : 'var(--color-primary)',
+                }}
+              >
+                {i === 0 ? '女性（デフォルト）' : '男性'}
+              </button>
+            ))}
+          </div>
+
+          {/* Auto-play */}
+          <div
+            className="flex items-center justify-between py-3 border-t"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
+            <span className="text-base" style={{ color: 'var(--color-text-primary)' }}>自動再生</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={auto_play}
+              onClick={() => onUpdate({ auto_play: !auto_play })}
+              className="relative flex-shrink-0 rounded-full transition-colors"
+              style={{ width: 48, height: 28, backgroundColor: auto_play ? 'var(--color-primary)' : 'var(--color-border)' }}
+            >
+              <span
+                className="absolute top-0.5 bg-white rounded-full transition-transform"
+                style={{ left: 2, width: 24, height: 24, transform: auto_play ? 'translateX(20px)' : 'translateX(0)' }}
+              />
+            </button>
+          </div>
+
+          {/* Romanization */}
+          <div
+            className="flex items-center justify-between py-3 border-t"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
+            <span className="text-base" style={{ color: 'var(--color-text-primary)' }}>ローマ字表示</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={show_romanization}
+              onClick={() => onUpdate({ show_romanization: !show_romanization })}
+              className="relative flex-shrink-0 rounded-full transition-colors"
+              style={{ width: 48, height: 28, backgroundColor: show_romanization ? 'var(--color-primary)' : 'var(--color-border)' }}
+            >
+              <span
+                className="absolute top-0.5 bg-white rounded-full transition-transform"
+                style={{ left: 2, width: 24, height: 24, transform: show_romanization ? 'translateX(20px)' : 'translateX(0)' }}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── CompletionScreen ───────────────────────────────────────────────────────
 
 function CompletionScreen({ total, onBack }: { total: number; onBack: () => void }) {
   useEffect(() => {
@@ -412,10 +565,13 @@ export function StudyPage() {
   const navigate = useNavigate()
   const { cards, loading, toggleStar } = useCards(id ?? '')
   const study = useStudy(cards, id ?? '')
-  const { preferred_voice, auto_play, show_romanization } = useProfile()
+  const { preferred_voice, auto_play, show_romanization, update } = useProfile()
 
   const [isCompleted, setIsCompleted] = useState(false)
-  const [navDirection, setNavDirection] = useState<'forward' | 'backward'>('forward')
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [speakerState, setSpeakerState] = useState<SpeakerState>('idle')
+  // useRef for direction so exit animation always reads the latest value synchronously
+  const navDirectionRef = useRef<'forward' | 'backward'>('forward')
   const dragStartX = useRef<number | null>(null)
 
   // Reset completion when filter/shuffle changes
@@ -435,7 +591,9 @@ export function StudyPage() {
   })
 
   const handleNext = () => {
-    setNavDirection('forward')
+    navDirectionRef.current = 'forward'
+    stopArabicTTS()
+    setSpeakerState('idle')
     if (study.currentIndex === study.total - 1) {
       study.resetSavedPosition()
       setIsCompleted(true)
@@ -445,7 +603,9 @@ export function StudyPage() {
   }
 
   const handlePrev = () => {
-    setNavDirection('backward')
+    navDirectionRef.current = 'backward'
+    stopArabicTTS()
+    setSpeakerState('idle')
     study.goPrev()
   }
 
@@ -454,14 +614,17 @@ export function StudyPage() {
   const currentArabic = study.currentCard?.arabic
   useEffect(() => {
     if (auto_play && currentArabic) {
-      playArabicTTS(currentArabic, preferred_voice)
+      setSpeakerState('loading')
+      playArabicTTS(currentArabic, preferred_voice, () => setSpeakerState('playing'))
+        .finally(() => setSpeakerState('idle'))
     }
   }, [currentCardId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSpeaker = () => {
-    if (study.currentCard) {
-      playArabicTTS(study.currentCard.arabic, preferred_voice)
-    }
+    if (!study.currentCard) return
+    setSpeakerState('loading')
+    playArabicTTS(study.currentCard.arabic, preferred_voice, () => setSpeakerState('playing'))
+      .finally(() => setSpeakerState('idle'))
   }
 
   const handleStarToggle = () => {
@@ -478,7 +641,7 @@ export function StudyPage() {
     )
   }
 
-  // ── Completion screen (項目5) ──
+  // ── Completion screen ──
 
   if (isCompleted) {
     return <CompletionScreen total={study.total} onBack={() => navigate(-1)} />
@@ -504,20 +667,28 @@ export function StudyPage() {
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg-page)' }}>
 
-      {/* ── Top bar (項目1: × on right, no star) ── */}
+      {/* ── Top bar ── */}
       <div
         className="sticky top-0 z-10 flex items-center justify-between px-4 h-14"
         style={{ backgroundColor: 'var(--color-bg-card)', borderBottom: '1px solid var(--color-border)' }}
       >
-        {/* Left spacer (same width as right button for centering) */}
-        <div style={{ minWidth: 44 }} />
+        {/* Settings gear (left) */}
+        <button
+          type="button"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="設定"
+          className="flex items-center justify-center rounded-xl transition-colors"
+          style={{ minWidth: 44, minHeight: 44, color: 'var(--color-text-secondary)' }}
+        >
+          <GearIcon />
+        </button>
 
         {/* Progress */}
         <span className="text-sm font-medium tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
           {study.currentNumber} / {study.total}
         </span>
 
-        {/* 項目1: × close button */}
+        {/* Close button (right) */}
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -550,13 +721,21 @@ export function StudyPage() {
         }}
       >
         <div className="w-full max-w-md">
-          <AnimatePresence mode="wait" custom={navDirection} initial={false}>
+          {/* Pass navDirectionRef as custom so exit animation always reads the latest direction synchronously */}
+          <AnimatePresence mode="wait" custom={navDirectionRef} initial={false}>
             <motion.div
               key={`${study.currentIndex}-${study.displayMode}`}
-              custom={navDirection}
-              initial={(dir: string) => ({ opacity: 0, x: dir === 'forward' ? 60 : -60 })}
+              custom={navDirectionRef}
+              initial={(ref: React.MutableRefObject<'forward' | 'backward'>) => ({
+                opacity: 0,
+                x: ref.current === 'forward' ? 60 : -60,
+              })}
               animate={{ opacity: 1, x: 0, transition: { duration: 0.18 } }}
-              exit={(dir: string) => ({ opacity: 0, x: dir === 'forward' ? -60 : 60, transition: { duration: 0.12 } })}
+              exit={(ref: React.MutableRefObject<'forward' | 'backward'>) => ({
+                opacity: 0,
+                x: ref.current === 'forward' ? -60 : 60,
+                transition: { duration: 0.12 },
+              })}
             >
               {study.currentCard && study.displayMode === 'flip' && (
                 <FlipCard
@@ -566,6 +745,7 @@ export function StudyPage() {
                   isFlipped={study.isFlipped}
                   isStarred={study.currentCard.is_starred}
                   showRomanization={show_romanization}
+                  speakerState={speakerState}
                   onFlip={study.flip}
                   onSpeaker={handleSpeaker}
                   onToggleStar={handleStarToggle}
@@ -578,6 +758,7 @@ export function StudyPage() {
                   romanization={study.currentCard.romanization}
                   isStarred={study.currentCard.is_starred}
                   showRomanization={show_romanization}
+                  speakerState={speakerState}
                   onSpeaker={handleSpeaker}
                   onToggleStar={handleStarToggle}
                 />
@@ -644,6 +825,16 @@ export function StudyPage() {
           {study.filter === 'starred' ? '星付きのみ' : '全カード'}
         </ToggleButton>
       </div>
+
+      {/* ── Settings modal ── */}
+      <StudySettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        preferred_voice={preferred_voice}
+        auto_play={auto_play}
+        show_romanization={show_romanization}
+        onUpdate={update}
+      />
     </div>
   )
 }

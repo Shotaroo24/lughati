@@ -28,7 +28,7 @@ function checkRateLimit(userId: string): boolean {
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
 }
 
 serve(async (req) => {
@@ -52,12 +52,18 @@ serve(async (req) => {
   })
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) {
+
+  // Allow anon key access for guest users
+  const authToken = authHeader.replace(/^Bearer\s+/i, '')
+  const isAnonAccess = !user && authToken === SUPABASE_ANON_KEY
+
+  if ((authError || !user) && !isAnonAccess) {
     return new Response('認証エラー', { status: 401, headers: CORS_HEADERS })
   }
 
   // ── レート制限 ────────────────────────────────────────────────────────────
-  if (!checkRateLimit(user.id)) {
+  const rateLimitKey = user?.id ?? 'anon'
+  if (!checkRateLimit(rateLimitKey)) {
     return new Response('レート制限超過', { status: 429, headers: CORS_HEADERS })
   }
 
