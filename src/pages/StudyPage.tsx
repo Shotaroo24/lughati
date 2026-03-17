@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { useCards } from '../hooks/useCards'
 import { useStudy } from '../hooks/useStudy'
+import { useProfile } from '../hooks/useProfile'
 import { playArabicTTS } from '../lib/tts'
 import type { DisplayMode, CardFilter } from '../types/study'
 
@@ -98,6 +99,7 @@ interface FlipCardProps {
   romanization: string | null
   isFlipped: boolean
   isStarred: boolean
+  showRomanization: boolean
   onFlip: () => void
   onSpeaker: () => void
   onToggleStar: () => void
@@ -107,7 +109,7 @@ const FLIP_DURATION = 0.3 // seconds
 
 function FlipCard({
   arabic, english, romanization,
-  isFlipped, isStarred,
+  isFlipped, isStarred, showRomanization,
   onFlip, onSpeaker, onToggleStar,
 }: FlipCardProps) {
   const controls = useAnimation()
@@ -241,7 +243,7 @@ function FlipCard({
             >
               {english}
             </p>
-            {romanization && (
+            {showRomanization && romanization && (
               <p
                 className="text-center italic"
                 style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}
@@ -263,13 +265,14 @@ interface BothSidesCardProps {
   english: string
   romanization: string | null
   isStarred: boolean
+  showRomanization: boolean
   onSpeaker: () => void
   onToggleStar: () => void
 }
 
 function BothSidesCard({
   arabic, english, romanization,
-  isStarred, onSpeaker, onToggleStar,
+  isStarred, showRomanization, onSpeaker, onToggleStar,
 }: BothSidesCardProps) {
   return (
     <div
@@ -338,7 +341,7 @@ function BothSidesCard({
         >
           {english}
         </p>
-        {romanization && (
+        {showRomanization && romanization && (
           <p className="text-center italic" style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
             {romanization}
           </p>
@@ -409,6 +412,7 @@ export function StudyPage() {
   const navigate = useNavigate()
   const { cards, loading, toggleStar } = useCards(id ?? '')
   const study = useStudy(cards, id ?? '')
+  const { preferred_voice, auto_play, show_romanization } = useProfile()
 
   const [isCompleted, setIsCompleted] = useState(false)
   const [navDirection, setNavDirection] = useState<'forward' | 'backward'>('forward')
@@ -445,9 +449,18 @@ export function StudyPage() {
     study.goPrev()
   }
 
+  // Auto-play: trigger TTS when card changes if setting is on
+  const currentCardId = study.currentCard?.id
+  const currentArabic = study.currentCard?.arabic
+  useEffect(() => {
+    if (auto_play && currentArabic) {
+      playArabicTTS(currentArabic, preferred_voice)
+    }
+  }, [currentCardId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSpeaker = () => {
     if (study.currentCard) {
-      playArabicTTS(study.currentCard.arabic)
+      playArabicTTS(study.currentCard.arabic, preferred_voice)
     }
   }
 
@@ -552,6 +565,7 @@ export function StudyPage() {
                   romanization={study.currentCard.romanization}
                   isFlipped={study.isFlipped}
                   isStarred={study.currentCard.is_starred}
+                  showRomanization={show_romanization}
                   onFlip={study.flip}
                   onSpeaker={handleSpeaker}
                   onToggleStar={handleStarToggle}
@@ -563,6 +577,7 @@ export function StudyPage() {
                   english={study.currentCard.english}
                   romanization={study.currentCard.romanization}
                   isStarred={study.currentCard.is_starred}
+                  showRomanization={show_romanization}
                   onSpeaker={handleSpeaker}
                   onToggleStar={handleStarToggle}
                 />
