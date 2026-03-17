@@ -3,7 +3,10 @@
     "allow": [
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(netstat -ano)"
+      "Bash(netstat -ano)",
+      "Bash(xxd /c/Lugati/Review.md)",
+      "Bash(powershell.exe -Command \"Get-Content 'C:\\\\Lugati\\\\Review.md' -Raw\")",
+      "Bash(node:*)"
     ]
   }
 }

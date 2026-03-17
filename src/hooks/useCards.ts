@@ -183,5 +183,50 @@ export function useCards(deckId: string) {
     await supabase.from('cards').update({ is_starred: newValue }).eq('id', id)
   }
 
-  return { cards, loading, error, createCard, updateCard, deleteCard, toggleStar, refetch: fetchCards }
+  // ── bulkCreateCards ───────────────────────────────────────────────────────
+
+  const bulkCreateCards = async (
+    inputs: CardInput[]
+  ): Promise<{ error: string | null; count: number }> => {
+    if (inputs.length === 0) return { error: null, count: 0 }
+
+    if (isGuest) {
+      const existing = readGuestCards(deckId)
+      const now = new Date().toISOString()
+      const newCards: Card[] = inputs.map((input, i) => ({
+        id: crypto.randomUUID(),
+        deck_id: deckId,
+        arabic: input.arabic,
+        english: input.english,
+        romanization: input.romanization ?? null,
+        is_starred: false,
+        position: existing.length + i,
+        created_at: now,
+        updated_at: now,
+      }))
+      const updated = [...existing, ...newCards]
+      writeGuestCards(deckId, updated)
+      setCards(updated)
+      return { error: null, count: newCards.length }
+    }
+
+    if (!supabase) return { error: 'Supabase が設定されていません', count: 0 }
+
+    const rows = inputs.map((input, i) => ({
+      deck_id: deckId,
+      arabic: input.arabic,
+      english: input.english,
+      romanization: input.romanization ?? null,
+      position: cards.length + i,
+    }))
+
+    const { data, error: err } = await supabase.from('cards').insert(rows).select()
+    if (err) return { error: err.message, count: 0 }
+
+    const newCards = (data as Card[]) ?? []
+    setCards(prev => [...prev, ...newCards])
+    return { error: null, count: newCards.length }
+  }
+
+  return { cards, loading, error, createCard, updateCard, deleteCard, toggleStar, bulkCreateCards, refetch: fetchCards }
 }
