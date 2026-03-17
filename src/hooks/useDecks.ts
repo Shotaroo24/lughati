@@ -83,7 +83,8 @@ export function useDecks() {
 
   const createDeck = async (
     title: string,
-    description?: string
+    description?: string,
+    folderId?: string
   ): Promise<{ error: string | null }> => {
     if (isGuest) {
       const now = new Date().toISOString()
@@ -92,6 +93,7 @@ export function useDecks() {
         user_id: 'guest',
         title,
         description: description ?? null,
+        folder_id: folderId ?? null,
         last_studied_at: null,
         created_at: now,
         updated_at: now,
@@ -107,7 +109,7 @@ export function useDecks() {
 
     const { data, error: err } = await supabase
       .from('decks')
-      .insert({ title, description: description ?? null, user_id: user.id })
+      .insert({ title, description: description ?? null, user_id: user.id, folder_id: folderId ?? null })
       .select('*, cards(count)')
       .single()
 

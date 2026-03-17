@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom'
 interface HeaderProps {
   title?: string
   showBack?: boolean
+  /** Custom back handler. When omitted and showBack is true, navigate(-1) is used. */
+  onBack?: () => void
   rightAction?: React.ReactNode
 }
 
-export function Header({ title, showBack = false, rightAction }: HeaderProps) {
+export function Header({ title, showBack = false, onBack, rightAction }: HeaderProps) {
   const navigate = useNavigate()
 
   return (
@@ -20,7 +22,7 @@ export function Header({ title, showBack = false, rightAction }: HeaderProps) {
       <div className="flex items-center gap-2 min-w-[44px]">
         {showBack && (
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => onBack ? onBack() : navigate(-1)}
             aria-label="戻る"
             style={{ color: 'var(--color-primary)', minWidth: 44, minHeight: 44 }}
             className="flex items-center justify-center rounded-xl"

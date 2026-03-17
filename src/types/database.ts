@@ -14,6 +14,7 @@ export interface Deck {
   title: string;
   description: string | null;
   last_studied_at: string | null;
+  folder_id?: string | null;
   created_at: string;
   updated_at: string;
   card_count?: number; // computed by query

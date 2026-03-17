@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useDecks } from '../hooks/useDecks'
 import { useCards } from '../hooks/useCards'
+import { useProfile } from '../hooks/useProfile'
 import type { CardInput } from '../hooks/useCards'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { CardListItem } from '../components/card/CardListItem'
 import { CardForm } from '../components/card/CardForm'
 import { BulkImportModal } from '../components/card/BulkImportModal'
+import { HeroCard } from '../components/card/HeroCard'
 import { Button } from '../components/ui/Button'
 import type { Card } from '../types/database'
 
@@ -16,6 +18,7 @@ export function DeckDetailPage() {
   const navigate = useNavigate()
   const { decks } = useDecks()
   const { cards, loading, error, createCard, updateCard, deleteCard, toggleStar, bulkCreateCards } = useCards(id ?? '')
+  const { preferred_voice, show_romanization } = useProfile()
 
   const [formOpen, setFormOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
@@ -90,15 +93,25 @@ export function DeckDetailPage() {
           </div>
         )}
 
-        {/* Study button */}
+        {/* Hero card + study button */}
         {!loading && cards.length > 0 && (
-          <Button
-            fullWidth
-            className="mb-5"
-            onClick={() => navigate(`/decks/${id}/study`)}
-          >
-            学習を始める（{cards.length}枚）
-          </Button>
+          <>
+            <HeroCard
+              card={cards[0]}
+              voiceName={preferred_voice}
+              showRomanization={show_romanization}
+              onStudy={() => navigate(`/decks/${id}/study`)}
+              onEdit={() => openEdit(cards[0])}
+              onToggleStar={toggleStar}
+            />
+            <Button
+              fullWidth
+              className="mb-5"
+              onClick={() => navigate(`/decks/${id}/study`)}
+            >
+              学習を始める（{cards.length}枚）
+            </Button>
+          </>
         )}
 
         {/* Loading skeleton */}
