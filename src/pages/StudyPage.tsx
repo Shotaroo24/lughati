@@ -7,6 +7,8 @@ import { useStudy } from '../hooks/useStudy'
 import { useProfile } from '../hooks/useProfile'
 import { playArabicTTS, stopArabicTTS } from '../lib/tts'
 import type { DisplayMode, CardFilter } from '../types/study'
+import type { VoiceName } from '../types/database'
+import { VOICE_IDS } from '../types/database'
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
@@ -427,7 +429,7 @@ function StudySettingsModal({
   preferred_voice: string
   auto_play: boolean
   show_romanization: boolean
-  onUpdate: (changes: Partial<{ preferred_voice: 'ar-XA-Neural2-A' | 'ar-XA-Neural2-C'; auto_play: boolean; show_romanization: boolean }>) => void
+  onUpdate: (changes: Partial<{ preferred_voice: VoiceName; auto_play: boolean; show_romanization: boolean }>) => void
 }) {
   if (!open) return null
 
@@ -458,7 +460,7 @@ function StudySettingsModal({
           {/* Voice */}
           <p className="text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>アラビア語音声</p>
           <div className="flex gap-2 mb-5">
-            {(['ar-XA-Neural2-A', 'ar-XA-Neural2-C'] as const).map((v, i) => (
+            {VOICE_IDS.map((v, i) => (
               <button
                 key={v}
                 type="button"

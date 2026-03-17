@@ -3,6 +3,8 @@ import { supabase } from './supabase'
 
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+const FALLBACK_SPEECH_RATE = 0.85
+const DEFAULT_VOICE = 'ar-XA-Neural2-A'
 
 interface CachedAudio {
   blob: Blob
@@ -47,7 +49,7 @@ function fallbackWebSpeech(text: string, onStart?: () => void): void {
   speechSynthesis.cancel()
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.lang = 'ar'
-  utterance.rate = 0.85
+  utterance.rate = FALLBACK_SPEECH_RATE
   onStart?.()
   speechSynthesis.speak(utterance)
 }
@@ -59,7 +61,7 @@ export function stopArabicTTS(): void {
 
 export async function playArabicTTS(
   text: string,
-  voice: string = 'ar-XA-Neural2-A',
+  voice: string = DEFAULT_VOICE,
   onPlayStart?: () => void,
 ): Promise<void> {
   // Stop any currently playing audio immediately

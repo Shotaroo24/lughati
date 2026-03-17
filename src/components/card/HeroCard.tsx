@@ -91,7 +91,7 @@ export function HeroCard({ card, voiceName, showRomanization, onStudy, onEdit, o
         <button
           type="button"
           aria-label="音声を再生"
-          className="flex items-center justify-center rounded-xl transition-colors hover:bg-[#FFF0F3]"
+          className="flex items-center justify-center rounded-xl transition-colors hover:bg-[var(--color-primary-light)]"
           style={{
             minWidth: 36, minHeight: 36,
             color: speaking ? 'var(--color-primary)' : 'var(--color-text-secondary)',
@@ -103,7 +103,7 @@ export function HeroCard({ card, voiceName, showRomanization, onStudy, onEdit, o
         <button
           type="button"
           aria-label="カードを編集"
-          className="flex items-center justify-center rounded-xl transition-colors hover:bg-[#FFF0F3]"
+          className="flex items-center justify-center rounded-xl transition-colors hover:bg-[var(--color-primary-light)]"
           style={{ minWidth: 36, minHeight: 36, color: 'var(--color-text-secondary)' }}
           onClick={handleEdit}
         >
@@ -112,7 +112,7 @@ export function HeroCard({ card, voiceName, showRomanization, onStudy, onEdit, o
         <button
           type="button"
           aria-label={card.is_starred ? 'スターを外す' : 'スターを付ける'}
-          className="flex items-center justify-center rounded-xl transition-colors hover:bg-[#FFF0F3]"
+          className="flex items-center justify-center rounded-xl transition-colors hover:bg-[var(--color-primary-light)]"
           style={{ minWidth: 36, minHeight: 36, color: 'var(--color-text-secondary)' }}
           onClick={handleStar}
         >

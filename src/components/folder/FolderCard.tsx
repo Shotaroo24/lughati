@@ -122,7 +122,7 @@ export function FolderCard({ folder, deckCount, onSelect, onRename, onDelete }: 
           <button
             type="button"
             aria-label="フォルダオプション"
-            className="flex items-center justify-center rounded-xl transition-colors hover:bg-[#FFF0F3]"
+            className="flex items-center justify-center rounded-xl transition-colors hover:bg-[var(--color-primary-light)]"
             style={{ minWidth: 36, minHeight: 36, color: 'var(--color-text-secondary)' }}
             onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
           >
@@ -138,7 +138,7 @@ export function FolderCard({ folder, deckCount, onSelect, onRename, onDelete }: 
               >
                 <button
                   type="button"
-                  className="w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-[#FFF0F3]"
+                  className="w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)]"
                   style={{ color: 'var(--color-text-primary)' }}
                   onClick={openRename}
                 >
@@ -146,7 +146,7 @@ export function FolderCard({ folder, deckCount, onSelect, onRename, onDelete }: 
                 </button>
                 <button
                   type="button"
-                  className="w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-[#FEF2F2]"
+                  className="w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-[var(--color-danger-light)]"
                   style={{ color: 'var(--color-danger)' }}
                   onClick={openDelete}
                 >

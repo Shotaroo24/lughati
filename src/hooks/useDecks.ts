@@ -2,10 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from './useAuth'
 import { supabase } from '../lib/supabase'
 import type { Deck } from '../types/database'
-
-// ── Guest localStorage storage ─────────────────────────────────────────────
-
-const GUEST_DECKS_KEY = 'lughati_guest_decks'
+import { GUEST_DECKS_KEY } from '../types/folder'
 
 function readGuestDecks(): Deck[] {
   try {

@@ -79,7 +79,7 @@ export function CardListItem({ card, onEdit, onDelete, onToggleStar }: CardListI
           type="button"
           aria-label="編集"
           onClick={() => onEdit(card)}
-          className="flex items-center justify-center rounded-lg shrink-0 transition-colors hover:text-[#E8567F]"
+          className="flex items-center justify-center rounded-lg shrink-0 transition-colors hover:text-[var(--color-primary)]"
           style={{ minWidth: 40, minHeight: 40, color: 'var(--color-text-secondary)' }}
         >
           <svg
@@ -101,7 +101,7 @@ export function CardListItem({ card, onEdit, onDelete, onToggleStar }: CardListI
           type="button"
           aria-label="削除"
           onClick={() => setConfirmOpen(true)}
-          className="flex items-center justify-center rounded-lg shrink-0 transition-colors hover:text-[#D94452]"
+          className="flex items-center justify-center rounded-lg shrink-0 transition-colors hover:text-[var(--color-danger)]"
           style={{ minWidth: 40, minHeight: 40, color: 'var(--color-text-secondary)' }}
         >
           <svg

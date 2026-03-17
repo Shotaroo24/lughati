@@ -67,7 +67,7 @@ export function DeckCard({ deck, onDelete, onMove }: DeckCardProps) {
                 type="button"
                 aria-label="フォルダに移動"
                 style={{ minWidth: 32, minHeight: 32, color: 'var(--color-text-secondary)' }}
-                className="flex items-center justify-center rounded-lg transition-colors hover:text-[#E8567F]"
+                className="flex items-center justify-center rounded-lg transition-colors hover:text-[var(--color-primary)]"
                 onClick={e => { e.stopPropagation(); onMove() }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -79,7 +79,7 @@ export function DeckCard({ deck, onDelete, onMove }: DeckCardProps) {
             type="button"
             aria-label="デッキを削除"
             style={{ minWidth: 36, minHeight: 36, color: 'var(--color-text-secondary)' }}
-            className="flex items-center justify-center rounded-lg shrink-0 transition-colors hover:text-[#D94452]"
+            className="flex items-center justify-center rounded-lg shrink-0 transition-colors hover:text-[var(--color-danger)]"
             onClick={e => {
               e.stopPropagation()
               setConfirmOpen(true)

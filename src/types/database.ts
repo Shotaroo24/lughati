@@ -1,7 +1,11 @@
+export type VoiceName = 'ar-XA-Neural2-A' | 'ar-XA-Neural2-C'
+
+export const VOICE_IDS = ['ar-XA-Neural2-A', 'ar-XA-Neural2-C'] as const satisfies readonly VoiceName[]
+
 export interface Profile {
   id: string;
   display_name: string | null;
-  preferred_voice: 'ar-XA-Neural2-A' | 'ar-XA-Neural2-C';
+  preferred_voice: VoiceName;
   auto_play: boolean;
   show_romanization: boolean;
   created_at: string;
