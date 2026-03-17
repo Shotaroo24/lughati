@@ -207,7 +207,7 @@ function FlipCard({
   return (
     <div
       className="w-full cursor-pointer select-none"
-      style={{ perspective: '2000px', minHeight: 300 }}
+      style={{ perspective: '2000px', minHeight: 400 }}
       onClick={onFlip}
       role="button"
       tabIndex={0}
@@ -218,7 +218,7 @@ function FlipCard({
         animate={controls}
         style={{
           position: 'relative',
-          minHeight: 300,
+          minHeight: 400,
           willChange: isAnimating ? 'transform' : 'auto',
         }}
       >
@@ -245,7 +245,7 @@ function FlipCard({
               className="text-center leading-relaxed"
               style={{
                 fontFamily: 'var(--font-arabic)',
-                fontSize: 36,
+                fontSize: 44,
                 fontWeight: 700,
                 color: 'var(--color-text-primary)',
                 WebkitFontSmoothing: 'antialiased',
@@ -283,7 +283,7 @@ function FlipCard({
             <p
               className="text-center"
               style={{
-                fontSize: 28,
+                fontSize: 32,
                 color: 'var(--color-text-primary)',
                 WebkitFontSmoothing: 'antialiased',
                 MozOsxFontSmoothing: 'grayscale',
@@ -295,7 +295,7 @@ function FlipCard({
             {showRomanization && romanization && (
               <p
                 className="text-center italic"
-                style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}
+                style={{ fontSize: 16, color: 'var(--color-text-secondary)' }}
               >
                 {romanization}
               </p>
@@ -331,7 +331,7 @@ function BothSidesCard({
       style={{
         backgroundColor: 'var(--color-bg-card)',
         boxShadow: 'var(--shadow-card-hover)',
-        minHeight: 300,
+        minHeight: 400,
       }}
     >
       <button
@@ -353,7 +353,7 @@ function BothSidesCard({
           className="text-center leading-relaxed"
           style={{
             fontFamily: 'var(--font-arabic)',
-            fontSize: 36,
+            fontSize: 44,
             fontWeight: 700,
             color: 'var(--color-text-primary)',
             WebkitFontSmoothing: 'antialiased',
@@ -371,7 +371,7 @@ function BothSidesCard({
         <p
           className="text-center"
           style={{
-            fontSize: 26,
+            fontSize: 30,
             color: 'var(--color-text-primary)',
             WebkitFontSmoothing: 'antialiased',
             MozOsxFontSmoothing: 'grayscale',
@@ -380,7 +380,7 @@ function BothSidesCard({
           {english}
         </p>
         {showRomanization && romanization && (
-          <p className="text-center italic" style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+          <p className="text-center italic" style={{ fontSize: 15, color: 'var(--color-text-secondary)' }}>
             {romanization}
           </p>
         )}
@@ -577,13 +577,15 @@ export function StudyPage() {
   // Keyboard navigation
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (settingsOpen || isCompleted) return
       if (e.key === 'ArrowRight') handleNext()
       else if (e.key === 'ArrowLeft') handlePrev()
+      else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); study.flip() }
       else if (e.key === ' ') { e.preventDefault(); study.flip() }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  })
+  }, [settingsOpen, isCompleted, study.flip, study.currentIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleNext = () => {
     navDirectionRef.current = 'forward'
@@ -715,7 +717,7 @@ export function StudyPage() {
           dragStartX.current = null
         }}
       >
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-[800px]">
           {/* Pass navDirectionRef as custom so exit animation always reads the latest direction synchronously */}
           <AnimatePresence mode="wait" custom={navDirectionRef} initial={false}>
             <motion.div

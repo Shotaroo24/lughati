@@ -413,33 +413,49 @@ export function BulkImportModal({ open, onClose, onImport }: BulkImportModalProp
         )}
 
         {/* Action buttons */}
-        <div className="flex gap-3">
-          {parsed && (
-            <Button type="button" variant="secondary" onClick={reset} disabled={loading}>
+        {parsed ? (
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="!px-4 !py-2 !text-sm shrink-0"
+              onClick={reset}
+              disabled={loading}
+            >
               やり直し
             </Button>
-          )}
-          <Button
-            type="button"
-            variant="secondary"
-            fullWidth={!parsed}
-            onClick={handleClose}
-            disabled={loading}
-          >
-            キャンセル
-          </Button>
-          {parsed && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="!px-4 !py-2 !text-sm shrink-0"
+              onClick={handleClose}
+              disabled={loading}
+            >
+              キャンセル
+            </Button>
             <Button
               type="button"
               fullWidth
+              className="!py-2 !text-sm"
               loading={loading}
               disabled={previewCards.length === 0}
               onClick={handleImport}
             >
               インポート
             </Button>
-          )}
-        </div>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            variant="secondary"
+            fullWidth
+            className="!py-2 !text-sm"
+            onClick={handleClose}
+            disabled={loading}
+          >
+            キャンセル
+          </Button>
+        )}
       </div>
     </Modal>
   )
