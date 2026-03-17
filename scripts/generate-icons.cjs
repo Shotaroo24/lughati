@@ -1,136 +1,135 @@
-#!/usr/bin/env node
-// Generates PWA icons (192px and 512px) as pure PNG using Node.js built-ins only.
-// Design: sakura pink (#E8567F) rounded-rectangle with white Arabic letter ل (lam).
+// PWA icon generator — sakura gradient + cherry blossom + Lughati text
+// Requires: sharp  (npm install --save-dev sharp)
+// Usage:    node scripts/generate-icons.cjs
 
-const zlib = require('zlib')
-const fs = require('fs')
-const path = require('path')
+'use strict'
+const sharp = require('sharp')
+const path  = require('path')
+const fs    = require('fs')
 
-// ── CRC32 ────────────────────────────────────────────────────────────────────
+// ── SVG builder ───────────────────────────────────────────────────────────────
 
-const CRC_TABLE = (() => {
-  const t = new Uint32Array(256)
-  for (let i = 0; i < 256; i++) {
-    let c = i
-    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1)
-    t[i] = c
+function buildSVG(size) {
+  const cx = size / 2
+  const cy = size / 2
+
+  // Petal: egg-shaped, pointing up from (cx, cy - offset)
+  // Makes a wide, rounded cherry-blossom petal with a small notch at the tip
+  function petalPath(halfW, len, notch) {
+    // base at (0,0), tip at (0,-len)
+    const tipIndent = notch   // notch depth at tip
+    return [
+      `M 0 0`,
+      // right curve out to widest point then up to near tip
+      `C ${halfW} ${-len * 0.1},  ${halfW * 1.05} ${-len * 0.55},  ${halfW * 0.3} ${-len * 0.88}`,
+      // right side of notch
+      `C ${halfW * 0.12} ${-len * 0.96},  ${tipIndent * 0.5} ${-len},  0 ${-(len - tipIndent)}`,
+      // left side of notch
+      `C ${-tipIndent * 0.5} ${-len},  ${-halfW * 0.12} ${-len * 0.96},  ${-halfW * 0.3} ${-len * 0.88}`,
+      // left curve back to base
+      `C ${-halfW * 1.05} ${-len * 0.55},  ${-halfW} ${-len * 0.1},  0 0`,
+      'Z',
+    ].join(' ')
   }
-  return t
+
+  const petalLen    = size * 0.215
+  const petalHalfW  = size * 0.085   // wider = rounder petal
+  const petalNotch  = size * 0.012   // small notch at tip
+  const petalOffset = size * 0.095   // gap between icon center and petal base
+  const pd = petalPath(petalHalfW, petalLen, petalNotch)
+
+  const petals = Array.from({ length: 5 }, (_, i) => {
+    const deg = i * 72 - 90  // first petal points straight up
+    // Translate petal base to distance `petalOffset` from center, then rotate
+    const bx = cx
+    const by = cy - petalOffset
+    return `<g transform="rotate(${deg}, ${cx}, ${cy}) translate(${bx}, ${by})">
+      <path d="${pd}" fill="white" fill-opacity="0.92"/>
+      <line x1="0" y1="0" x2="0" y2="${-(petalLen * 0.75).toFixed(1)}"
+            stroke="rgba(220,70,110,0.18)" stroke-width="${(size * 0.007).toFixed(1)}"
+            stroke-linecap="round"/>
+    </g>`
+  }).join('\n    ')
+
+  // Stamen: small yellow-white dots around the center
+  const stamenR   = size * 0.052
+  const dotR      = size * 0.013
+  const stamenDots = Array.from({ length: 5 }, (_, i) => {
+    const a = (i * 72 - 90) * Math.PI / 180
+    const dx = cx + Math.cos(a) * stamenR
+    const dy = cy + Math.sin(a) * stamenR
+    return `<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="${dotR.toFixed(1)}"
+              fill="#FFE4EE" fill-opacity="0.95"/>`
+  }).join('\n    ')
+
+  // Text
+  const fontSize = size * 0.13
+  const textY    = cy + size * 0.39
+  const cornerR  = size * 0.22
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"
+     xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#E8567F"/>
+      <stop offset="100%" stop-color="#F4A0B5"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="white" stop-opacity="0.15"/>
+      <stop offset="60%"  stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="rr">
+      <rect width="${size}" height="${size}" rx="${cornerR}" ry="${cornerR}"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background gradient -->
+  <rect width="${size}" height="${size}" rx="${cornerR}" ry="${cornerR}" fill="url(#bg)"/>
+
+  <!-- Top highlight -->
+  <rect width="${size}" height="${size * 0.6}" rx="${cornerR}" ry="${cornerR}"
+        fill="url(#shine)" clip-path="url(#rr)"/>
+
+  <!-- 5 cherry blossom petals -->
+  ${petals}
+
+  <!-- Center: outer ring + white dot -->
+  <circle cx="${cx}" cy="${cy}" r="${(size * 0.065).toFixed(1)}"
+          fill="#E8567F" fill-opacity="0.5"/>
+  <circle cx="${cx}" cy="${cy}" r="${(size * 0.038).toFixed(1)}"
+          fill="white" fill-opacity="0.90"/>
+
+  <!-- Stamen dots -->
+  ${stamenDots}
+
+  <!-- Lughati text -->
+  <text
+    x="${cx}" y="${textY}"
+    text-anchor="middle" dominant-baseline="middle"
+    font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+    font-size="${fontSize.toFixed(1)}"
+    font-weight="700"
+    letter-spacing="${(size * 0.005).toFixed(1)}"
+    fill="white"
+    fill-opacity="0.97"
+  >Lughati</text>
+</svg>`
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+;(async () => {
+  const outDir = path.join(__dirname, '..', 'public', 'icons')
+  fs.mkdirSync(outDir, { recursive: true })
+
+  for (const size of [192, 512]) {
+    const svg  = buildSVG(size)
+    const dest = path.join(outDir, `icon-${size}.png`)
+    await sharp(Buffer.from(svg))
+      .png({ compressionLevel: 9 })
+      .toFile(dest)
+    console.log(`✓  icon-${size}.png`)
+  }
+  console.log('Done!')
 })()
-
-function crc32(buf) {
-  let crc = 0xffffffff
-  for (let i = 0; i < buf.length; i++) crc = CRC_TABLE[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8)
-  return (crc ^ 0xffffffff) >>> 0
-}
-
-function pngChunk(type, data) {
-  const t = Buffer.from(type, 'ascii')
-  const d = Buffer.isBuffer(data) ? data : Buffer.from(data)
-  const len = Buffer.allocUnsafe(4)
-  len.writeUInt32BE(d.length)
-  const crc = Buffer.allocUnsafe(4)
-  crc.writeUInt32BE(crc32(Buffer.concat([t, d])))
-  return Buffer.concat([len, t, d, crc])
-}
-
-// ── Pixel drawing ─────────────────────────────────────────────────────────────
-
-// Returns [r, g, b, a] for pixel (x, y) in a size×size icon
-function getPixel(x, y, size) {
-  const nx = x / size  // normalized 0-1
-  const ny = y / size
-
-  // Rounded rectangle with ~22% corner radius
-  const margin = 0.04
-  const r = 0.20
-  const left = margin, right = 1 - margin
-  const top = margin, bottom = 1 - margin
-
-  function inRR() {
-    if (nx < left || nx > right || ny < top || ny > bottom) return false
-    if (nx < left + r && ny < top + r)
-      return Math.hypot(nx - (left + r), ny - (top + r)) <= r
-    if (nx > right - r && ny < top + r)
-      return Math.hypot(nx - (right - r), ny - (top + r)) <= r
-    if (nx < left + r && ny > bottom - r)
-      return Math.hypot(nx - (left + r), ny - (bottom - r)) <= r
-    if (nx > right - r && ny > bottom - r)
-      return Math.hypot(nx - (right - r), ny - (bottom - r)) <= r
-    return true
-  }
-
-  if (!inRR()) return [0xff, 0xf7, 0xf9, 0]  // transparent (sakura-white bg)
-
-  // Draw Arabic letter ل (lam) in white using simple bezier-free geometry
-  // Scaled to fill ~50% of the icon height, centered
-  const lx = 0.30  // left edge of glyph
-  const ly = 0.22  // top edge
-  const lw = 0.10  // stroke width
-  const lh = 0.56  // total glyph height
-
-  // Vertical stroke
-  const inVert = nx >= lx && nx <= lx + lw && ny >= ly && ny <= ly + lh - lw * 1.5
-
-  // Horizontal base
-  const inBase = nx >= lx && nx <= lx + lw * 3.8 && ny >= ly + lh - lw && ny <= ly + lh
-
-  // Curved hook on top-right of vertical stroke (small arc)
-  const hookCx = lx + lw * 2.5
-  const hookCy = ly + lw * 1.5
-  const hookOuter = lw * 1.5
-  const hookInner = lw * 0.5
-  const dx = nx - hookCx, dy = ny - hookCy
-  const dist = Math.hypot(dx, dy)
-  const inHook = dist <= hookOuter && dist >= hookInner && dy < 0 && nx > lx + lw
-
-  if (inVert || inBase || inHook) return [255, 255, 255, 255]  // white
-
-  return [0xe8, 0x56, 0x7f, 255]  // #E8567F pink
-}
-
-// ── PNG builder ────────────────────────────────────────────────────────────────
-
-function makePNG(size) {
-  // Raw scanlines: filter-byte(0) + RGBA * width, one per row
-  const rowBytes = 1 + size * 4
-  const raw = Buffer.allocUnsafe(size * rowBytes)
-
-  for (let y = 0; y < size; y++) {
-    raw[y * rowBytes] = 0  // filter: None
-    for (let x = 0; x < size; x++) {
-      const [r, g, b, a] = getPixel(x, y, size)
-      const off = y * rowBytes + 1 + x * 4
-      raw[off] = r; raw[off + 1] = g; raw[off + 2] = b; raw[off + 3] = a
-    }
-  }
-
-  const ihdr = Buffer.allocUnsafe(13)
-  ihdr.writeUInt32BE(size, 0)
-  ihdr.writeUInt32BE(size, 4)
-  ihdr[8] = 8   // bit depth
-  ihdr[9] = 6   // RGBA
-  ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0
-
-  const compressed = zlib.deflateSync(raw, { level: 9 })
-
-  const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
-  return Buffer.concat([
-    sig,
-    pngChunk('IHDR', ihdr),
-    pngChunk('IDAT', compressed),
-    pngChunk('IEND', Buffer.alloc(0)),
-  ])
-}
-
-// ── Main ───────────────────────────────────────────────────────────────────────
-
-const outDir = path.join(__dirname, '..', 'public', 'icons')
-fs.mkdirSync(outDir, { recursive: true })
-
-for (const size of [192, 512]) {
-  const png = makePNG(size)
-  const filepath = path.join(outDir, `icon-${size}.png`)
-  fs.writeFileSync(filepath, png)
-  console.log(`Created icon-${size}.png  (${png.length} bytes)`)
-}
