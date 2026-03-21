@@ -8,7 +8,9 @@
       "Bash(powershell.exe -Command \"Get-Content 'C:\\\\Lugati\\\\Review.md' -Raw\")",
       "Bash(node:*)",
       "Bash(node -e \"require\\(''sharp''\\)\")",
-      "Bash(node -e \"require\\(''canvas''\\)\")"
+      "Bash(node -e \"require\\(''canvas''\\)\")",
+      "mcp__serena__list_dir",
+      "mcp__serena__check_onboarding_performed"
     ]
   }
 }
