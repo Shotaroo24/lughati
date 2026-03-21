@@ -104,13 +104,6 @@ export function DeckDetailPage() {
               onEdit={() => openEdit(cards[0])}
               onToggleStar={toggleStar}
             />
-            <Button
-              fullWidth
-              className="mb-5"
-              onClick={() => navigate(`/decks/${id}/study`)}
-            >
-              学習を始める（{cards.length}枚）
-            </Button>
           </>
         )}
 
