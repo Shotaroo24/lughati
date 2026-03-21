@@ -100,8 +100,8 @@ function SpeakerButton({ speakerState, onPress }: {
       style={{
         minWidth: 44,
         minHeight: 44,
-        color: isPlaying ? '#E8567F' : 'var(--color-primary)',
-        backgroundColor: isPlaying ? 'rgba(232,86,127,0.12)' : 'var(--color-primary-light)',
+        color: 'var(--color-primary)',
+        backgroundColor: isPlaying ? 'var(--color-primary-alpha-12)' : 'var(--color-primary-light)',
         transition: 'background-color 0.15s, color 0.15s',
       }}
     >
@@ -110,7 +110,7 @@ function SpeakerButton({ speakerState, onPress }: {
           className="absolute inset-0 rounded-full"
           animate={{ scale: [1, 1.8], opacity: [0.25, 0] }}
           transition={{ repeat: Infinity, duration: 1.0, ease: 'easeOut' }}
-          style={{ backgroundColor: '#E8567F' }}
+          style={{ backgroundColor: 'var(--color-primary)' }}
         />
       )}
       {isLoading ? (

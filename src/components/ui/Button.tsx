@@ -5,10 +5,10 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {
-  primary: 'bg-[#E8567F] text-white hover:bg-[#C4395F] active:bg-[#C4395F]',
-  secondary: 'bg-[#FFF0F3] text-[#E8567F] hover:bg-[#FFE0E8] active:bg-[#FFE0E8]',
-  danger: 'bg-[#FEF2F2] text-[#D94452] hover:bg-[#FEE2E2] active:bg-[#FEE2E2]',
-  ghost: 'bg-transparent text-[#8C8C96] hover:bg-[#FFF0F3] active:bg-[#FFF0F3]',
+  primary: 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)] active:bg-[var(--color-primary-dark)]',
+  secondary: 'bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary-mid)] active:bg-[var(--color-primary-mid)]',
+  danger: 'bg-[var(--color-danger-light)] text-[var(--color-danger)] hover:bg-[var(--color-danger-mid)] active:bg-[var(--color-danger-mid)]',
+  ghost: 'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-primary-light)] active:bg-[var(--color-primary-light)]',
 }
 
 export function Button({

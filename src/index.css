@@ -30,6 +30,11 @@
   /* Border */
   --color-border: #F0E8EB;
 
+  /* Extended tokens */
+  --color-primary-mid: #FFE0E8;
+  --color-danger-mid: #FEE2E2;
+  --color-primary-alpha-12: rgba(232, 86, 127, 0.12);
+
   /* Typography */
   --font-arabic: 'Noto Naskh Arabic', serif;
   --font-ui: 'Inter', system-ui, sans-serif;

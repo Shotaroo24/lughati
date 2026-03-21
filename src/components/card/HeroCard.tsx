@@ -76,7 +76,7 @@ export function HeroCard({ card, voiceName, showRomanization, onStudy, onEdit, o
       style={{
         backgroundColor: 'var(--color-bg-card)',
         boxShadow: 'var(--shadow-card)',
-        background: 'linear-gradient(135deg, #fff 0%, #FFF7F9 100%)',
+        background: 'linear-gradient(135deg, var(--color-bg-card) 0%, var(--color-bg-page) 100%)',
       }}
       onMouseEnter={e => (e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)')}
       onMouseLeave={e => (e.currentTarget.style.boxShadow = 'var(--shadow-card)')}
@@ -93,7 +93,7 @@ export function HeroCard({ card, voiceName, showRomanization, onStudy, onEdit, o
           aria-label="音声を再生"
           className="flex items-center justify-center rounded-xl transition-colors hover:bg-[var(--color-primary-light)]"
           style={{
-            minWidth: 36, minHeight: 36,
+            minWidth: 44, minHeight: 44,
             color: speaking ? 'var(--color-primary)' : 'var(--color-text-secondary)',
           }}
           onClick={handleSpeak}
@@ -104,7 +104,7 @@ export function HeroCard({ card, voiceName, showRomanization, onStudy, onEdit, o
           type="button"
           aria-label="カードを編集"
           className="flex items-center justify-center rounded-xl transition-colors hover:bg-[var(--color-primary-light)]"
-          style={{ minWidth: 36, minHeight: 36, color: 'var(--color-text-secondary)' }}
+          style={{ minWidth: 44, minHeight: 44, color: 'var(--color-text-secondary)' }}
           onClick={handleEdit}
         >
           <EditIcon />
@@ -113,7 +113,7 @@ export function HeroCard({ card, voiceName, showRomanization, onStudy, onEdit, o
           type="button"
           aria-label={card.is_starred ? 'スターを外す' : 'スターを付ける'}
           className="flex items-center justify-center rounded-xl transition-colors hover:bg-[var(--color-primary-light)]"
-          style={{ minWidth: 36, minHeight: 36, color: 'var(--color-text-secondary)' }}
+          style={{ minWidth: 44, minHeight: 44, color: 'var(--color-text-secondary)' }}
           onClick={handleStar}
         >
           <StarIcon filled={card.is_starred} />

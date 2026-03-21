@@ -20,8 +20,8 @@ export function Input({ label, error, id, className = '', ...props }: InputProps
         className={[
           'rounded-xl px-4 py-3 text-base w-full',
           'border outline-none transition-colors',
-          'placeholder:text-[#8C8C96]',
-          error ? 'border-[#D94452]' : 'border-[#F0E8EB] focus:border-[#E8567F]',
+          'placeholder:text-[var(--color-text-secondary)]',
+          error ? 'border-[var(--color-danger)]' : 'border-[var(--color-border)] focus:border-[var(--color-primary)]',
           className,
         ].join(' ')}
         style={{
