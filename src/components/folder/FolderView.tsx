@@ -11,6 +11,7 @@ interface FolderViewProps {
   allFolders: Folder[]
   onCreateDeck: () => void
   onDeleteDeck: (id: string) => Promise<{ error: string | null }>
+  onRenameDeck: (id: string, newTitle: string) => Promise<{ error: string | null }>
   onMoveDeck: (deckId: string, targetFolderId: string) => Promise<{ error: string | null }>
   onDeckMoved: () => void
 }
@@ -21,6 +22,7 @@ export function FolderView({
   allFolders,
   onCreateDeck,
   onDeleteDeck,
+  onRenameDeck,
   onMoveDeck,
   onDeckMoved,
 }: FolderViewProps) {
@@ -66,6 +68,7 @@ export function FolderView({
             key={deck.id}
             deck={deck}
             onDelete={onDeleteDeck}
+            onRename={onRenameDeck}
             onMove={showMoveButton ? () => setMovingDeck(deck) : undefined}
           />
         ))}

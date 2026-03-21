@@ -1,6 +1,6 @@
-export type VoiceName = 'ar-XA-Neural2-A' | 'ar-XA-Neural2-C'
+export type VoiceName = 'ar-XA-Wavenet-A' | 'ar-XA-Wavenet-C'
 
-export const VOICE_IDS = ['ar-XA-Neural2-A', 'ar-XA-Neural2-C'] as const satisfies readonly VoiceName[]
+export const VOICE_IDS = ['ar-XA-Wavenet-A', 'ar-XA-Wavenet-C'] as const satisfies readonly VoiceName[]
 
 export interface Profile {
   id: string;

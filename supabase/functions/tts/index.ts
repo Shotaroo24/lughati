@@ -65,7 +65,10 @@ serve(async (req) => {
   }
 
   // Extract user ID from JWT for rate limiting (no network call)
-  let rateLimitKey = 'anon'
+  // For authenticated users: use their user ID (sub) so each user has their own bucket.
+  // For guests: use the client IP so multiple users don't share one 'anon' bucket.
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  let rateLimitKey = `ip:${clientIp}`
   if (authHeader) {
     const token = authHeader.replace(/^Bearer\s+/i, '')
     const payload = decodeJwtPayload(token)
@@ -86,7 +89,7 @@ serve(async (req) => {
   try {
     const body = await req.json()
     text = body.text
-    voice = body.voice ?? 'ar-XA-Neural2-A'
+    voice = body.voice ?? 'ar-XA-Wavenet-A'
   } catch {
     return new Response('リクエスト解析エラー', { status: 400, headers: CORS_HEADERS })
   }
@@ -120,8 +123,9 @@ serve(async (req) => {
 
     if (!ttsRes.ok) {
       const errText = await ttsRes.text()
-      console.error('Google TTS error:', ttsRes.status, errText)
-      return new Response('TTS APIエラー', { status: 500, headers: CORS_HEADERS })
+      console.error('[TTS] Google API error', ttsRes.status, errText)
+      // Pass the Google error body through so the client can log the real cause
+      return new Response(`Google TTS ${ttsRes.status}: ${errText}`, { status: 500, headers: CORS_HEADERS })
     }
 
     const { audioContent } = await ttsRes.json()

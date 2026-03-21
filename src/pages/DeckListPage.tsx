@@ -63,6 +63,7 @@ export function DeckListPage() {
     error: decksError,
     createDeck,
     deleteDeck,
+    renameDeck,
     refetch: refetchDecks,
   } = useDecks()
 
@@ -191,6 +192,7 @@ export function DeckListPage() {
             allFolders={folders}
             onCreateDeck={() => setCreateDeckOpen(true)}
             onDeleteDeck={deleteDeck}
+            onRenameDeck={renameDeck}
             onMoveDeck={moveDeckToFolder}
             onDeckMoved={refetchDecks}
           />

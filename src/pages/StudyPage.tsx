@@ -5,7 +5,7 @@ import confetti from 'canvas-confetti'
 import { useCards } from '../hooks/useCards'
 import { useStudy } from '../hooks/useStudy'
 import { useProfile } from '../hooks/useProfile'
-import { playArabicTTS, stopArabicTTS } from '../lib/tts'
+import { playArabicTTS, stopArabicTTS, prefetchArabicTTS } from '../lib/tts'
 import type { DisplayMode, CardFilter } from '../types/study'
 import type { VoiceName } from '../types/database'
 import { VOICE_IDS } from '../types/database'
@@ -518,6 +518,35 @@ function StudySettingsModal({
               />
             </button>
           </div>
+
+          {/* Keyboard shortcuts */}
+          <div className="pt-4 mt-1 border-t" style={{ borderColor: 'var(--color-border)' }}>
+            <p className="text-sm font-medium mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+              キーボードショートカット
+            </p>
+            <div className="flex flex-col gap-2">
+              {([
+                ['← →', 'カード移動'],
+                ['↑ ↓ / スペース', '裏返し'],
+                ['S', '星マーク'],
+                ['A', '発音再生'],
+              ] as [string, string][]).map(([key, desc]) => (
+                <div key={key} className="flex items-center justify-between">
+                  <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>{desc}</span>
+                  <kbd
+                    className="text-xs px-2 py-0.5 rounded-md font-mono"
+                    style={{
+                      backgroundColor: 'var(--color-primary-light)',
+                      border: '1px solid var(--color-border)',
+                      color: 'var(--color-text-secondary)',
+                    }}
+                  >
+                    {key}
+                  </kbd>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -570,6 +599,9 @@ export function StudyPage() {
   // useRef for direction so exit animation always reads the latest value synchronously
   const navDirectionRef = useRef<'forward' | 'backward'>('forward')
   const dragStartX = useRef<number | null>(null)
+  // Refs for keyboard handler — always point to the latest function to avoid stale closures
+  const handleStarToggleRef = useRef<() => void>(() => {})
+  const handleSpeakerRef = useRef<() => void>(() => {})
 
   // Reset completion when filter/shuffle changes
   useEffect(() => {
@@ -580,10 +612,14 @@ export function StudyPage() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (settingsOpen || isCompleted) return
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
       if (e.key === 'ArrowRight') handleNext()
       else if (e.key === 'ArrowLeft') handlePrev()
       else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); study.flip() }
       else if (e.key === ' ') { e.preventDefault(); study.flip() }
+      else if (e.key === 's' || e.key === 'S') handleStarToggleRef.current()
+      else if (e.key === 'a' || e.key === 'A') handleSpeakerRef.current()
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -619,6 +655,14 @@ export function StudyPage() {
     }
   }, [currentCardId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Prefetch audio for the next 2 cards in study order so auto-play has no loading delay
+  useEffect(() => {
+    const nextCards = study.studyCards.slice(study.currentIndex + 1, study.currentIndex + 3)
+    nextCards.forEach(card => {
+      if (card.arabic) void prefetchArabicTTS(card.arabic, preferred_voice)
+    })
+  }, [study.currentIndex, preferred_voice]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSpeaker = () => {
     if (!study.currentCard) return
     setSpeakerState('loading')
@@ -629,6 +673,10 @@ export function StudyPage() {
   const handleStarToggle = () => {
     if (study.currentCard) toggleStar(study.currentCard.id)
   }
+
+  // Keep refs up-to-date every render so the keyboard handler never has a stale closure
+  handleStarToggleRef.current = handleStarToggle
+  handleSpeakerRef.current = handleSpeaker
 
   // ── Loading ──
 

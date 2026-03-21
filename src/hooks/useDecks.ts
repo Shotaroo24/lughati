@@ -136,5 +136,24 @@ export function useDecks() {
     return { error: null }
   }
 
-  return { decks, loading, error, createDeck, deleteDeck, refetch: fetchDecks }
+  // ── renameDeck ────────────────────────────────────────────────────────────
+
+  const renameDeck = async (id: string, newTitle: string): Promise<{ error: string | null }> => {
+    if (isGuest) {
+      const updated = readGuestDecks().map(d => d.id === id ? { ...d, title: newTitle } : d)
+      writeGuestDecks(updated)
+      setDecks(updated)
+      return { error: null }
+    }
+
+    if (!supabase) return { error: 'Supabase が設定されていません' }
+
+    const { error: err } = await supabase.from('decks').update({ title: newTitle }).eq('id', id)
+    if (err) return { error: err.message }
+
+    setDecks(prev => prev.map(d => d.id === id ? { ...d, title: newTitle } : d))
+    return { error: null }
+  }
+
+  return { decks, loading, error, createDeck, deleteDeck, renameDeck, refetch: fetchDecks }
 }
