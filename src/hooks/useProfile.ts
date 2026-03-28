@@ -3,10 +3,9 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import type { Profile } from '../types/database'
 
-type ProfileSettings = Pick<Profile, 'preferred_voice' | 'auto_play' | 'show_romanization'>
+type ProfileSettings = Pick<Profile, 'auto_play' | 'show_romanization'>
 
 const DEFAULTS: ProfileSettings = {
-  preferred_voice: 'ar-XA-Wavenet-A',
   auto_play: false,
   show_romanization: true,
 }
@@ -48,7 +47,6 @@ export function useProfile() {
     profile,
     loading,
     update,
-    preferred_voice: profile?.preferred_voice ?? DEFAULTS.preferred_voice,
     auto_play: profile?.auto_play ?? DEFAULTS.auto_play,
     show_romanization: profile?.show_romanization ?? DEFAULTS.show_romanization,
   }

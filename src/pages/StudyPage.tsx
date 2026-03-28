@@ -7,8 +7,6 @@ import { useStudy } from '../hooks/useStudy'
 import { useProfile } from '../hooks/useProfile'
 import { playArabicTTS, stopArabicTTS, prefetchArabicTTS } from '../lib/tts'
 import type { DisplayMode, CardFilter } from '../types/study'
-import type { VoiceName } from '../types/database'
-import { VOICE_IDS } from '../types/database'
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
@@ -419,17 +417,15 @@ function ToggleButton({ active, onClick, children }: {
 function StudySettingsModal({
   open,
   onClose,
-  preferred_voice,
   auto_play,
   show_romanization,
   onUpdate,
 }: {
   open: boolean
   onClose: () => void
-  preferred_voice: string
   auto_play: boolean
   show_romanization: boolean
-  onUpdate: (changes: Partial<{ preferred_voice: VoiceName; auto_play: boolean; show_romanization: boolean }>) => void
+  onUpdate: (changes: Partial<{ auto_play: boolean; show_romanization: boolean }>) => void
 }) {
   if (!open) return null
 
@@ -455,26 +451,6 @@ function StudySettingsModal({
             >
               <XIcon />
             </button>
-          </div>
-
-          {/* Voice */}
-          <p className="text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>アラビア語音声</p>
-          <div className="flex gap-2 mb-5">
-            {VOICE_IDS.map((v, i) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => onUpdate({ preferred_voice: v })}
-                className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors"
-                style={{
-                  minHeight: 44,
-                  backgroundColor: preferred_voice === v ? 'var(--color-primary)' : 'var(--color-primary-light)',
-                  color: preferred_voice === v ? '#fff' : 'var(--color-primary)',
-                }}
-              >
-                {i === 0 ? '女性（デフォルト）' : '男性'}
-              </button>
-            ))}
           </div>
 
           {/* Auto-play */}
@@ -591,7 +567,7 @@ export function StudyPage() {
   const navigate = useNavigate()
   const { cards, loading, toggleStar } = useCards(id ?? '')
   const study = useStudy(cards, id ?? '')
-  const { preferred_voice, auto_play, show_romanization, update } = useProfile()
+  const { auto_play, show_romanization, update } = useProfile()
 
   const [isCompleted, setIsCompleted] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -648,9 +624,9 @@ export function StudyPage() {
   const currentCardId = study.currentCard?.id
   const currentArabic = study.currentCard?.arabic
   useEffect(() => {
-    if (auto_play && currentArabic) {
+    if (auto_play && study.currentCard) {
       setSpeakerState('loading')
-      playArabicTTS(currentArabic, preferred_voice, () => setSpeakerState('playing'))
+      playArabicTTS(study.currentCard.audio_url, study.currentCard.arabic, () => setSpeakerState('playing'))
         .finally(() => setSpeakerState('idle'))
     }
   }, [currentCardId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -659,14 +635,14 @@ export function StudyPage() {
   useEffect(() => {
     const nextCards = study.studyCards.slice(study.currentIndex + 1, study.currentIndex + 3)
     nextCards.forEach(card => {
-      if (card.arabic) void prefetchArabicTTS(card.arabic, preferred_voice)
+      void prefetchArabicTTS(card.audio_url, card.arabic)
     })
-  }, [study.currentIndex, preferred_voice]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [study.currentIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSpeaker = () => {
     if (!study.currentCard) return
     setSpeakerState('loading')
-    playArabicTTS(study.currentCard.arabic, preferred_voice, () => setSpeakerState('playing'))
+    playArabicTTS(study.currentCard.audio_url, study.currentCard.arabic, () => setSpeakerState('playing'))
       .finally(() => setSpeakerState('idle'))
   }
 
@@ -877,7 +853,6 @@ export function StudyPage() {
       <StudySettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        preferred_voice={preferred_voice}
         auto_play={auto_play}
         show_romanization={show_romanization}
         onUpdate={update}

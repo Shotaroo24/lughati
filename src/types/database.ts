@@ -1,11 +1,7 @@
-export type VoiceName = 'ar-XA-Wavenet-A' | 'ar-XA-Wavenet-C'
-
-export const VOICE_IDS = ['ar-XA-Wavenet-A', 'ar-XA-Wavenet-C'] as const satisfies readonly VoiceName[]
-
 export interface Profile {
   id: string;
   display_name: string | null;
-  preferred_voice: VoiceName;
+  preferred_voice: string; // kept in DB but no longer used by frontend
   auto_play: boolean;
   show_romanization: boolean;
   created_at: string;
@@ -30,6 +26,7 @@ export interface Card {
   arabic: string;
   english: string;
   romanization: string | null;
+  audio_url: string | null;
   is_starred: boolean;
   position: number;
   created_at: string;

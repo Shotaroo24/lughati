@@ -1,24 +1,11 @@
 import { get, set } from 'idb-keyval'
-import { supabase } from './supabase'
 
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 const FALLBACK_SPEECH_RATE = 0.85
-const DEFAULT_VOICE = 'ar-XA-Wavenet-A'
 
 interface CachedAudio {
   blob: Blob
   timestamp: number
-}
-
-function cacheKey(voice: string, text: string): string {
-  return `tts:${voice}:${text}`
-}
-
-async function getSession(): Promise<string | null> {
-  if (!supabase) return null
-  const { data } = await supabase.auth.getSession()
-  return data.session?.access_token ?? null
 }
 
 // Module-level audio instance — only one plays at a time
@@ -64,18 +51,21 @@ export function stopArabicTTS(): void {
 }
 
 export async function playArabicTTS(
+  audioUrl: string | null,
   text: string,
-  voice: string = DEFAULT_VOICE,
   onPlayStart?: () => void,
 ): Promise<void> {
   // Stop any currently playing audio and cancel in-flight fetches
   stopArabicTTS()
 
-  const key = cacheKey(voice, text)
+  if (!audioUrl) {
+    fallbackWebSpeech(text, onPlayStart)
+    return
+  }
 
-  // Check IndexedDB cache
+  // Check IndexedDB cache (keyed by audioUrl)
   try {
-    const cached = await get<CachedAudio>(key)
+    const cached = await get<CachedAudio>(audioUrl)
     if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
       await playBlob(cached.blob, onPlayStart)
       return
@@ -84,38 +74,20 @@ export async function playArabicTTS(
     // Cache read failure is non-fatal
   }
 
-  // Fetch from proxy
+  // Fetch the pre-generated MP3 directly from Supabase Storage
   try {
-    const token = await getSession()
-    // Use session token for authenticated users, anon key for guests
-    const bearerToken = token ?? SUPABASE_ANON_KEY
-
     currentFetchController = new AbortController()
-    const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${bearerToken}`,
-        },
-        body: JSON.stringify({ text, voice }),
-        signal: currentFetchController.signal,
-      },
-    )
+    const res = await fetch(audioUrl, { signal: currentFetchController.signal })
     currentFetchController = null
 
     if (!res.ok) {
-      const errText = await res.text().catch(() => '')
-      console.error(`[TTS] HTTP ${res.status}:`, errText)
-      throw new Error(`TTS ${res.status}: ${errText}`)
+      throw new Error(`Audio fetch ${res.status}`)
     }
 
     const blob = await res.blob()
 
     // Save to cache (fire-and-forget)
-    set(key, { blob, timestamp: Date.now() }).catch(() => {})
+    set(audioUrl, { blob, timestamp: Date.now() }).catch(() => {})
 
     await playBlob(blob, onPlayStart)
   } catch (err) {
@@ -129,39 +101,24 @@ export async function playArabicTTS(
 // Silently pre-fetch and cache audio for a card without playing it.
 // Used to warm the cache for adjacent cards so auto-play has no loading delay.
 export async function prefetchArabicTTS(
+  audioUrl: string | null,
   text: string,
-  voice: string = DEFAULT_VOICE,
 ): Promise<void> {
-  const key = cacheKey(voice, text)
+  if (!audioUrl) return
 
   // Skip if already cached and fresh
   try {
-    const cached = await get<CachedAudio>(key)
+    const cached = await get<CachedAudio>(audioUrl)
     if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) return
   } catch {
     // ignore
   }
 
   try {
-    const token = await getSession()
-    const bearerToken = token ?? SUPABASE_ANON_KEY
-
-    const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${bearerToken}`,
-        },
-        body: JSON.stringify({ text, voice }),
-      },
-    )
-
+    const res = await fetch(audioUrl)
     if (!res.ok) return // silent failure — prefetch is best-effort
     const blob = await res.blob()
-    set(key, { blob, timestamp: Date.now() }).catch(() => {})
+    set(audioUrl, { blob, timestamp: Date.now() }).catch(() => {})
   } catch {
     // silent failure — prefetch must never affect UI
   }

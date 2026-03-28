@@ -43,21 +43,20 @@ function StarIcon({ filled }: { filled: boolean }) {
 
 interface HeroCardProps {
   card: Card
-  voiceName: string
   showRomanization: boolean
   onStudy: () => void
   onEdit: () => void
   onToggleStar: (id: string) => Promise<void>
 }
 
-export function HeroCard({ card, voiceName, showRomanization, onStudy, onEdit, onToggleStar }: HeroCardProps) {
+export function HeroCard({ card, showRomanization, onStudy, onEdit, onToggleStar }: HeroCardProps) {
   const [speaking, setSpeaking] = useState(false)
 
   const handleSpeak = async (e: React.MouseEvent) => {
     e.stopPropagation()
     if (speaking) return
     setSpeaking(true)
-    await playArabicTTS(card.arabic, voiceName).finally(() => setSpeaking(false))
+    await playArabicTTS(card.audio_url, card.arabic).finally(() => setSpeaking(false))
   }
 
   const handleEdit = (e: React.MouseEvent) => {

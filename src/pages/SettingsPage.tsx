@@ -91,7 +91,7 @@ function Divider() {
 export function SettingsPage() {
   const navigate = useNavigate()
   const { user, isGuest, signOut, deleteAccount } = useAuth()
-  const { preferred_voice, auto_play, show_romanization, update, loading } = useProfile()
+  const { auto_play, show_romanization, update, loading } = useProfile()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -146,52 +146,6 @@ export function SettingsPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-6">
-
-            {/* ── 音声 ── */}
-            <div>
-              <SectionHeader title="音声" />
-              <SettingCard>
-                <div className="px-4 py-4">
-                  <p className="text-base font-medium mb-3" style={{ color: 'var(--color-text-primary)' }}>
-                    アラビア語音声
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => update({ preferred_voice: 'ar-XA-Wavenet-A' })}
-                      className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors"
-                      style={{
-                        minHeight: 44,
-                        backgroundColor: preferred_voice === 'ar-XA-Wavenet-A'
-                          ? 'var(--color-primary)'
-                          : 'var(--color-primary-light)',
-                        color: preferred_voice === 'ar-XA-Wavenet-A'
-                          ? '#fff'
-                          : 'var(--color-primary)',
-                      }}
-                    >
-                      女性（デフォルト）
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => update({ preferred_voice: 'ar-XA-Wavenet-C' })}
-                      className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors"
-                      style={{
-                        minHeight: 44,
-                        backgroundColor: preferred_voice === 'ar-XA-Wavenet-C'
-                          ? 'var(--color-primary)'
-                          : 'var(--color-primary-light)',
-                        color: preferred_voice === 'ar-XA-Wavenet-C'
-                          ? '#fff'
-                          : 'var(--color-primary)',
-                      }}
-                    >
-                      男性
-                    </button>
-                  </div>
-                </div>
-              </SettingCard>
-            </div>
 
             {/* ── 再生 ── */}
             <div>

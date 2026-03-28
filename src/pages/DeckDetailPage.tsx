@@ -18,7 +18,7 @@ export function DeckDetailPage() {
   const navigate = useNavigate()
   const { decks } = useDecks()
   const { cards, loading, error, createCard, updateCard, deleteCard, toggleStar, bulkCreateCards } = useCards(id ?? '')
-  const { preferred_voice, show_romanization } = useProfile()
+  const { show_romanization } = useProfile()
 
   const [formOpen, setFormOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
@@ -98,7 +98,6 @@ export function DeckDetailPage() {
           <>
             <HeroCard
               card={cards[0]}
-              voiceName={preferred_voice}
               showRomanization={show_romanization}
               onStudy={() => navigate(`/decks/${id}/study`)}
               onEdit={() => openEdit(cards[0])}
