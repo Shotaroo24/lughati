@@ -49,6 +49,8 @@ interface SessionState {
   filter: CardFilter
   isShuffled: boolean
   shuffledOrder: number[]
+  // IDs of cards fixed at session start when filter === 'starred'
+  sessionCardIds: string[] | null
 }
 
 export function useStudy(allCards: Card[], deckId: string) {
@@ -59,13 +61,24 @@ export function useStudy(allCards: Card[], deckId: string) {
     filter: 'all',
     isShuffled: false,
     shuffledOrder: [],
+    sessionCardIds: null,
   }))
 
-  // Cards after filter applied
-  const filteredCards = useMemo(
-    () => (state.filter === 'starred' ? allCards.filter(c => c.is_starred) : allCards),
-    [allCards, state.filter]
-  )
+  // Cards after filter applied.
+  // When filter === 'starred', we use a snapshot of IDs taken when the filter
+  // was first applied so that un-starring a card mid-session doesn't remove it.
+  const filteredCards = useMemo(() => {
+    if (state.filter !== 'starred') return allCards
+    if (state.sessionCardIds !== null) {
+      // Preserve session order; fall back to current card data so star state updates are reflected
+      const idSet = new Set(state.sessionCardIds)
+      const byId = new Map(allCards.map(c => [c.id, c]))
+      return state.sessionCardIds
+        .filter(id => idSet.has(id) && byId.has(id))
+        .map(id => byId.get(id)!)
+    }
+    return allCards.filter(c => c.is_starred)
+  }, [allCards, state.filter, state.sessionCardIds])
 
   // Cards in study order (shuffled or original)
   const studyCards = useMemo(() => {
@@ -129,8 +142,17 @@ export function useStudy(allCards: Card[], deckId: string) {
   }, [filteredCards.length])
 
   const setFilter = useCallback((filter: CardFilter) => {
-    setState(s => ({ ...s, filter, currentIndex: 0, isFlipped: false, isShuffled: false, shuffledOrder: [] }))
-  }, [])
+    setState(s => ({
+      ...s,
+      filter,
+      currentIndex: 0,
+      isFlipped: false,
+      isShuffled: false,
+      shuffledOrder: [],
+      // Snapshot current starred card IDs so they stay fixed for this session
+      sessionCardIds: filter === 'starred' ? allCards.filter(c => c.is_starred).map(c => c.id) : null,
+    }))
+  }, [allCards])
 
   const setDisplayMode = useCallback((displayMode: DisplayMode) => {
     setState(s => ({ ...s, displayMode, isFlipped: false }))
