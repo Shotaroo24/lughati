@@ -622,7 +622,6 @@ export function StudyPage() {
 
   // Auto-play: trigger TTS when card changes if setting is on
   const currentCardId = study.currentCard?.id
-  const currentArabic = study.currentCard?.arabic
   useEffect(() => {
     if (auto_play && study.currentCard) {
       setSpeakerState('loading')

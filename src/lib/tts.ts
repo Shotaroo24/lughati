@@ -102,7 +102,7 @@ export async function playArabicTTS(
 // Used to warm the cache for adjacent cards so auto-play has no loading delay.
 export async function prefetchArabicTTS(
   audioUrl: string | null,
-  text: string,
+  _text: string,
 ): Promise<void> {
   if (!audioUrl) return
 
