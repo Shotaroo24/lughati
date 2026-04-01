@@ -1,7 +1,9 @@
 /**
- * Pre-generate Arabic TTS audio via ElevenLabs and upload to Supabase Storage.
+ * Pre-generate Arabic TTS audio for a specific deck or folder via ElevenLabs.
  *
- * Usage: npx tsx scripts/generate-tts.ts [--limit=N]
+ * Usage:
+ *   npx tsx scripts/generate-tts-deck.ts --folder="Words From Book (Fusuha)" [--limit=500]
+ *   npx tsx scripts/generate-tts-deck.ts --deck="Part 1" [--limit=500]
  *
  * Required env vars (in .env):
  *   ELEVENLABS_API_KEY
@@ -60,6 +62,24 @@ if (!SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 // ---------------------------------------------------------------------------
+// CLI args
+// ---------------------------------------------------------------------------
+
+const deckArg = process.argv.find(a => a.startsWith('--deck='))
+const folderArg = process.argv.find(a => a.startsWith('--folder='))
+const limitArg = process.argv.find(a => a.startsWith('--limit='))
+
+if (!deckArg && !folderArg) {
+  console.error('❌  --folder="フォルダ名" または --deck="デッキ名" を指定してください。')
+  console.error('    例: npx tsx scripts/generate-tts-deck.ts --folder="Words From Book (Fusuha)" --limit=500')
+  process.exit(1)
+}
+
+const DECK_TITLE = deckArg ? deckArg.split('=').slice(1).join('=').replace(/^["']|["']$/g, '') : null
+const FOLDER_NAME = folderArg ? folderArg.split('=').slice(1).join('=').replace(/^["']|["']$/g, '') : null
+const LIMIT = limitArg ? parseInt(limitArg.split('=')[1], 10) : undefined
+
+// ---------------------------------------------------------------------------
 // ElevenLabs config
 // ---------------------------------------------------------------------------
 
@@ -69,22 +89,10 @@ const TTS_BUCKET = 'tts'
 const DELAY_MS = 300
 
 // ---------------------------------------------------------------------------
-// Arabic text normalization
-// ---------------------------------------------------------------------------
-
-/**
- * Strip tashkeel (harakat) so ElevenLabs doesn't misread taa marbuta (ة) as
- * "ta" and doesn't over-enunciate vowel marks (U+064B–U+0652).
- */
-export function stripTashkeel(text: string): string {
-  return text.replace(/[\u064B-\u0652]/g, '')
-}
-
-// ---------------------------------------------------------------------------
 // Supabase client (service role — bypasses RLS)
 // ---------------------------------------------------------------------------
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -94,7 +102,11 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-export async function generateAudio(text: string): Promise<Buffer> {
+function stripTashkeel(text: string): string {
+  return text.replace(/[\u064B-\u0652]/g, '')
+}
+
+async function generateAudio(text: string): Promise<Buffer> {
   const normalized = stripTashkeel(text)
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}?output_format=mp3_44100_128`
 
@@ -126,7 +138,7 @@ export async function generateAudio(text: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer)
 }
 
-export async function uploadToStorage(cardId: string, audioBuffer: Buffer): Promise<string> {
+async function uploadToStorage(cardId: string, audioBuffer: Buffer): Promise<string> {
   const filePath = `${cardId}.mp3`
 
   const { error: uploadError } = await supabase.storage
@@ -155,16 +167,79 @@ interface Card {
 }
 
 async function main() {
-  console.log('🎙  ElevenLabs TTS pre-generation スタート\n')
+  console.log(`🎙  ElevenLabs TTS pre-generation スタート`)
 
+  let deckIds: string[]
+
+  if (FOLDER_NAME) {
+    // 1a. Find folder by name, then get all deck IDs in that folder
+    console.log(`📁  対象フォルダ: "${FOLDER_NAME}"\n`)
+
+    const { data: folders, error: folderError } = await supabase
+      .from('folders')
+      .select('id, name')
+      .eq('name', FOLDER_NAME)
+
+    if (folderError) {
+      console.error('❌  フォルダ取得エラー:', folderError.message)
+      process.exit(1)
+    }
+    if (!folders || folders.length === 0) {
+      console.error(`❌  フォルダが見つかりません: "${FOLDER_NAME}"`)
+      process.exit(1)
+    }
+
+    const folderIds = folders.map(f => f.id)
+    const { data: decks, error: deckError } = await supabase
+      .from('decks')
+      .select('id, title')
+      .in('folder_id', folderIds)
+      .order('created_at', { ascending: true })
+
+    if (deckError) {
+      console.error('❌  デッキ取得エラー:', deckError.message)
+      process.exit(1)
+    }
+    if (!decks || decks.length === 0) {
+      console.error(`❌  フォルダ内にデッキが見つかりません: "${FOLDER_NAME}"`)
+      process.exit(1)
+    }
+
+    deckIds = decks.map(d => d.id)
+    console.log(`✅  フォルダ内デッキ (${decks.length}件): ${decks.map(d => d.title).join(', ')}\n`)
+  } else {
+    // 1b. Find deck by title
+    console.log(`📚  対象デッキ: "${DECK_TITLE}"\n`)
+
+    const { data: decks, error: deckError } = await supabase
+      .from('decks')
+      .select('id, title')
+      .eq('title', DECK_TITLE)
+
+    if (deckError) {
+      console.error('❌  デッキ取得エラー:', deckError.message)
+      process.exit(1)
+    }
+    if (!decks || decks.length === 0) {
+      console.error(`❌  デッキが見つかりません: "${DECK_TITLE}"`)
+      process.exit(1)
+    }
+
+    deckIds = decks.map(d => d.id)
+    console.log(`✅  デッキID: ${deckIds.join(', ')}\n`)
+  }
+
+  // 2. Fetch all cards in those decks with pagination
   const allCards: Card[] = []
   const PAGE_SIZE = 1000
   let offset = 0
+
   while (true) {
     const { data, error: fetchError } = await supabase
       .from('cards')
       .select('id, arabic, audio_url')
-      .order('created_at', { ascending: true })
+      .in('deck_id', deckIds)
+      .order('position', { ascending: true })
       .range(offset, offset + PAGE_SIZE - 1)
 
     if (fetchError) {
@@ -184,15 +259,13 @@ async function main() {
 
   const alreadyDone = allCards.filter(c => c.audio_url)
   const pending = allCards.filter(c => !c.audio_url)
+  const toProcess = LIMIT ? pending.slice(0, LIMIT) : pending
 
-  const limitArg = process.argv.find(a => a.startsWith('--limit='))
-  const limit = limitArg ? parseInt(limitArg.split('=')[1], 10) : undefined
-  const toProcess = limit ? pending.slice(0, limit) : pending
-
-  console.log(`📊  カード総数:      ${allCards.length} 件`)
-  console.log(`✅  スキップ (済み): ${alreadyDone.length} 件`)
-  console.log(`⏳  未処理:         ${pending.length} 件`)
-  console.log(`🎯  今回処理:       ${toProcess.length} 件`)
+  // Pre-run summary
+  console.log(`📊  デッキ内カード総数:  ${allCards.length} 件`)
+  console.log(`✅  スキップ (済み):    ${alreadyDone.length} 件`)
+  console.log(`⏳  未処理:            ${pending.length} 件`)
+  console.log(`🎯  今回処理:          ${toProcess.length} 件${LIMIT ? ` (--limit=${LIMIT})` : ''}`)
   console.log('')
 
   if (toProcess.length === 0) {
@@ -233,10 +306,16 @@ async function main() {
     }
   }
 
+  // Final summary
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log(`成功:     ${succeeded} 件`)
   console.log(`失敗:     ${failed} 件`)
   console.log(`スキップ: ${alreadyDone.length} 件 (既にaudio_urlあり)`)
+
+  if (pending.length > toProcess.length) {
+    const remaining = pending.length - toProcess.length
+    console.log(`\n⏭  残り ${remaining} 件あります。次回は同じコマンドを --limit なしで実行してください。`)
+  }
 
   if (failedList.length > 0) {
     console.log('\n❌  失敗リスト (要リトライ):')
