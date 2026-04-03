@@ -687,7 +687,7 @@ export function StudyPage() {
   // ── Main ──
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg-page)' }}>
+    <div className="min-h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--color-bg-page)' }}>
 
       {/* ── Top bar ── */}
       <div
@@ -742,7 +742,7 @@ export function StudyPage() {
           dragStartX.current = null
         }}
       >
-        <div className="w-full max-w-[800px]">
+        <div className="w-full max-w-[800px] overflow-hidden">
           {/* Pass navDirectionRef as custom so exit animation always reads the latest direction synchronously */}
           <AnimatePresence mode="wait" custom={navDirectionRef} initial={false}>
             <motion.div
